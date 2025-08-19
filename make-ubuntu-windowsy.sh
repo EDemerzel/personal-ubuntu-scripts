@@ -22,7 +22,7 @@
 #   chmod +x make-ubuntu-windowsy.sh
 #   ./make-ubuntu-windowsy.sh
 #
-# (c) 2025
+# (c) Ralph O'Flinn 2025
 
 set -euo pipefail
 
