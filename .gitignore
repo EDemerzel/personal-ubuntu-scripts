@@ -1,0 +1,54 @@
+# General OS/editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.#*
+*.bak
+*.old
+*.orig
+*.rej
+
+# Logs and temp
+*.log
+*.tmp
+tmp/
+temp/
+
+# Archives/bundles
+*.tar
+*.gz
+*.zip
+*.tgz
+
+# Shell/user histories and env files
+.bash_history
+.zsh_history
+.env
+.env.local
+.env.*
+
+# IDE/editor folders (keep select VS Code files)
+.idea/
+node_modules/
+npm-debug.log*
+
+# Build/cache/coverage (just in case for mixed repos)
+.cache/
+dist/
+build/
+.coverage
+*.cov
+*.gcov
+
+# VS Code: ignore everything by default but allow useful config files
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Virtual environments (if any scripts set one up)
+.venv/
+venv/

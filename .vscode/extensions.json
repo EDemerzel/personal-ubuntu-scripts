@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "timonwong.shellcheck",
+    "mads-hartmann.bash-ide-vscode",
+    "EditorConfig.EditorConfig",
+    "DavidAnson.vscode-markdownlint"
+  ]
+}

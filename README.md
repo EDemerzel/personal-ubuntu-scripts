@@ -32,7 +32,10 @@ A growing collection of small, single-purpose scripts I use on Ubuntu. Each scri
 
 ## Current scripts
 
-- `make-ubuntu-windowsy/` — Helpers and tweaks intended to make Ubuntu feel a bit more "Windows-y" for convenience and familiarity. See that folder's `README.md` for details and exact behavior.
+<!-- scripts:start -->
+- `make-ubuntu-windowsy/` — Make Ubuntu Windowsy
+
+<!-- scripts:end -->
 
 ## Contributing / personal notes
 

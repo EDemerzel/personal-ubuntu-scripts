@@ -1,19 +1,29 @@
 {
-    "files.associations": {
-        "LICENSE": "markdown",
-        "LICENSE.*": "markdown",
-        "COPYING": "markdown",
-        "NOTICE": "markdown",
-        "README": "markdown",
-        "README.*": "markdown",
-        "CHANGELOG": "markdown",
-        "CHANGELOG.*": "markdown",
-        "CHANGES": "markdown",
-        "HISTORY": "markdown",
-        "RELEASING": "markdown",
-        "CONTRIBUTING": "markdown",
-        "CODE_OF_CONDUCT": "markdown",
-        "SECURITY": "markdown",
-        "SUPPORT": "markdown"
-    }
+  "files.associations": {
+    "LICENSE": "markdown",
+    "LICENSE.*": "markdown",
+    "COPYING": "markdown",
+    "NOTICE": "markdown",
+    "README": "markdown",
+    "README.*": "markdown",
+    "CHANGELOG": "markdown",
+    "CHANGELOG.*": "markdown",
+    "CHANGES": "markdown",
+    "HISTORY": "markdown",
+    "RELEASING": "markdown",
+    "CONTRIBUTING": "markdown",
+    "CODE_OF_CONDUCT": "markdown",
+    "SECURITY": "markdown",
+    "SUPPORT": "markdown",
+    ".shellcheckrc": "ini",
+    ".markdownlintignore": "plaintext"
+  },
+  "markdownlint.ignore": [
+    ".shellcheckrc",
+    ".markdownlintignore",
+    ".gitattributes",
+    ".editorconfig",
+    ".gitignore",
+    ".vscode/**"
+  ]
 }

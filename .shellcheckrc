@@ -1,0 +1,14 @@
+; ShellCheck configuration
+; See: https://www.shellcheck.net/wiki/
+
+; Enable all checks by default, but you can selectively disable noisy ones here.
+shell = bash
+format = tty
+
+; Common suppressions (uncomment as needed):
+; disable=SC1090,SC1091  ; Sourcing files that may not exist at lint time
+; disable=SC2002         ; Useless cat (sometimes intentional for readability)
+; disable=SC2086         ; Double quote to prevent globbing and word splitting
+
+; External sources search path (if you use .d includes)
+; source-path=SCRIPTDIR:.

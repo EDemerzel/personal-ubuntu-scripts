@@ -1,0 +1,11 @@
+# Ensure consistent LF line endings in the repo
+* text=auto eol=lf
+
+# Treat shell scripts with sensible diffs
+*.sh text eol=lf diff
+
+# Markdown files
+*.md text eol=lf
+
+# Make GitHub linguist treat shell correctly if needed
+*.sh linguist-language=Shell
