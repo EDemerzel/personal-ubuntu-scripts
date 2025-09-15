@@ -71,13 +71,13 @@ if (-not $PowerShell) {
 
 Write-Output "Created script directory: $Name/"
 Write-Output 'Files created:'
-Write-Output '  - {0}/README.md' -f $Name
+Write-Output ('  - {0}/README.md' -f $Name)
 if ($PowerShell) {
-  Write-Output '  - {0}/{0}.ps1' -f $Name
+  Write-Output ('  - {0}/{0}.ps1' -f $Name)
 } elseif ($Python) {
-  Write-Output '  - {0}/{0}.py (executable)' -f $Name
+  Write-Output ('  - {0}/{0}.py (executable)' -f $Name)
 } else {
-  Write-Output '  - {0}/{0}.sh (executable)' -f $Name
+  Write-Output ('  - {0}/{0}.sh (executable)' -f $Name)
 }
 
 # Update README
