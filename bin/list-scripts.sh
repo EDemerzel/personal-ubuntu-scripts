@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 set -euo pipefail
 
 # Update the "Current scripts" section in the root README.md by listing all

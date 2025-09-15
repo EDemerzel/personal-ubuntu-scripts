@@ -37,6 +37,28 @@ A growing collection of small, single-purpose scripts I use on Ubuntu. Each scri
 
 <!-- scripts:end -->
 
+## Adding new scripts
+
+Use the scaffolding tool to create new script directories:
+
+```bash
+./bin/new-script.sh <script-name> [description]
+```
+
+Examples:
+
+```bash
+./bin/new-script.sh backup-dotfiles "Backup user dotfiles to cloud storage"
+./bin/new-script.sh setup-dev-env "Configure development environment"
+```
+
+This creates a new folder with:
+
+- `README.md` template with placeholders filled in
+- `LICENSE` file (MIT by default)
+- `<script-name>.sh` executable with boilerplate and best practices
+- Automatically updates this README's script list
+
 ## Contributing / personal notes
 
 - New scripts should follow the same folder-per-script pattern and include a minimal `README.md` explaining purpose, prerequisites, and usage.
