@@ -1,4 +1,19 @@
-#!/usr/bin/env bash
+#!/u# Description:
+#   Automate turning a fresh Ubuntu GNOME desktop into a Windows‑style environment.
+#   Compatible with Ubuntu 24.04, 24.10, and 25.04.
+#
+# Features:
+#   • Applies the WhiteSur GTK theme & icon pack
+#   • Installs & enables Dash‑to‑Panel (bottom taskbar) via its Makefile
+#   • Reloads Dash‑to‑Panel in your running GNOME Shell (no logout required)
+#   • Detects your GNOME Shell version and checks out the matching Dash‑to‑Panel release tag
+#   • Configures panel thickness, length, position, anchor, visibility & stacking per initial‑setup screenshot
+#   • Sets Segoe UI system font
+#   • Installs Plank dock and configures it to autostart
+#
+# Prerequisites:
+#   • Ubuntu 24.04+ with GNOME Shell (45, 46, 47, or 48)
+#   • No PPAs needed
 #
 # make-ubuntu-windowsy.sh
 #
@@ -27,7 +42,7 @@
 set -euo pipefail
 
 echo "→ 1. Backing up current GNOME settings…"
-dconf dump / > ~/gnome-settings-backup-$(date +%F).dconf \
+dconf dump / > "$HOME/gnome-settings-backup-$(date +%F).dconf" \
   || echo "⚠️ Backup failed—continuing anyway."
 
 echo "→ 2. Updating system & installing prerequisites…"
@@ -35,6 +50,7 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y \
   git wget unzip make gettext \
   gnome-tweaks chrome-gnome-shell \
+  gnome-shell-extensions gnome-shell-extension-manager \
   ttf-mscorefonts-installer plank
 
 echo "→ 3. Cleaning up previous artifacts…"
@@ -65,7 +81,8 @@ case "$GNOME_MAJOR" in
   46) TAG="v61" ;;
   47) TAG="v65" ;;
   48) TAG="v66" ;;
-  *)  TAG=""  ;;
+  49) TAG="v66" ;;  # Use latest available for newer versions
+  *)  TAG="v66"  ;; # Default to latest for unknown versions
 esac
 
 if [[ -n "$TAG" ]]; then
@@ -75,7 +92,7 @@ if [[ -n "$TAG" ]]; then
     && echo "     ✓ Using tag $TAG" \
     || echo "⚠️ Tag $TAG not found; using default branch."
 else
-  echo "   → No known tag for GNOME $GNOME_MAJOR; staying on default branch."
+  echo "   → Using latest version for GNOME $GNOME_MAJOR."
 fi
 
 echo "   → Running 'make install'…"
@@ -83,8 +100,20 @@ make install       # compiles schemas & translations, installs to ~/.local/share
 cd -
 
 echo "→ 7. Enabling Dash-to-Panel extension…"
+# Give GNOME Shell time to detect the newly installed extension
+sleep 2
 if ! gnome-extensions enable dash-to-panel@jderose9.github.com; then
-  echo "⚠️ Could not enable extension; ensure GNOME Shell is running."
+  echo "⚠️ Could not enable extension immediately; trying to refresh extension list..."
+  # Try to refresh extensions list
+  gdbus call --session \
+    --dest org.gnome.Shell \
+    --object-path /org/gnome/Shell \
+    --method org.gnome.Shell.Eval \
+    "Main.extensionManager.reloadExtensions()" || true
+  sleep 2
+  if ! gnome-extensions enable dash-to-panel@jderose9.github.com; then
+    echo "⚠️ Extension enable failed. Please enable manually via GNOME Extensions app or restart GNOME Shell."
+  fi
 fi
 
 echo "→ 8. Reloading Dash-to-Panel in the running GNOME Shell…"
@@ -96,9 +125,17 @@ gdbus call --session \
 
 echo "→ 9. Applying Windows-style theme, icon pack & Segoe UI font…"
 gsettings set org.gnome.desktop.interface gtk-theme  'WhiteSur-light'
-gsettings set org.gnome.shell.extensions.user-theme    name     'WhiteSur-light'
 gsettings set org.gnome.desktop.interface icon-theme  'WhiteSur'
 gsettings set org.gnome.desktop.interface font-name   'Segoe UI 10'
+
+# Apply user-theme extension settings if available
+if gsettings list-schemas | grep -q "org.gnome.shell.extensions.user-theme"; then
+  gsettings set org.gnome.shell.extensions.user-theme name 'WhiteSur-light'
+else
+  echo "⚠️ User-theme extension schema not found. Attempting to enable User Themes extension..."
+  gnome-extensions enable user-theme@gnome-shell-extensions.gcampax.github.com || \
+  echo "⚠️ Please enable the User Themes extension manually via GNOME Extensions app."
+fi
 
 echo "→ 10. Configuring Dash-to-Panel layout & stacking…"
 SCHEMA="org.gnome.shell.extensions.dash-to-panel"
