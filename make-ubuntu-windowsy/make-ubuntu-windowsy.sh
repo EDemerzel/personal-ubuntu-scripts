@@ -1,4 +1,6 @@
-#!/u# Description:
+#!/usr/bin/env bash
+
+# Description:
 #   Automate turning a fresh Ubuntu GNOME desktop into a Windows‑style environment.
 #   Compatible with Ubuntu 24.04, 24.10, and 25.04.
 #
@@ -39,7 +41,7 @@
 #
 # (c) Ralph O'Flinn 2025
 
-set -euo pipefail
+set -eo pipefail  # Remove 'u' flag to allow unset variables in conditionals
 
 echo "→ 1. Backing up current GNOME settings…"
 dconf dump / > "$HOME/gnome-settings-backup-$(date +%F).dconf" \
@@ -100,19 +102,51 @@ make install       # compiles schemas & translations, installs to ~/.local/share
 cd -
 
 echo "→ 7. Enabling Dash-to-Panel extension…"
-# Give GNOME Shell time to detect the newly installed extension
-sleep 2
-if ! gnome-extensions enable dash-to-panel@jderose9.github.com; then
-  echo "⚠️ Could not enable extension immediately; trying to refresh extension list..."
-  # Try to refresh extensions list
+# Wait for GNOME Shell to detect the newly installed extension
+sleep 3
+
+# Function to check if extension exists
+extension_exists() {
+  gnome-extensions list | grep -q "dash-to-panel@jderose9.github.com"
+}
+
+# Function to check if extension is enabled
+extension_enabled() {
+  gnome-extensions list --enabled | grep -q "dash-to-panel@jderose9.github.com"
+}
+
+# Try multiple approaches to enable the extension
+if extension_exists; then
+  echo "   → Extension found, attempting to enable..."
+  if gnome-extensions enable dash-to-panel@jderose9.github.com; then
+    echo "   ✓ Extension enabled successfully"
+  else
+    echo "⚠️ Direct enable failed, trying reload approach..."
+    # Force reload GNOME Shell extension system
+    gdbus call --session \
+      --dest org.gnome.Shell \
+      --object-path /org/gnome/Shell \
+      --method org.gnome.Shell.Eval \
+      "Main.extensionManager.reloadExtensions()" 2>/dev/null || true
+    sleep 2
+    gnome-extensions enable dash-to-panel@jderose9.github.com || \
+      echo "⚠️ Extension enable failed. You may need to enable it manually after a GNOME Shell restart."
+  fi
+else
+  echo "⚠️ Extension not detected. Forcing extension system reload..."
+  # Try to force GNOME Shell to scan for new extensions
   gdbus call --session \
     --dest org.gnome.Shell \
     --object-path /org/gnome/Shell \
     --method org.gnome.Shell.Eval \
-    "Main.extensionManager.reloadExtensions()" || true
-  sleep 2
-  if ! gnome-extensions enable dash-to-panel@jderose9.github.com; then
-    echo "⚠️ Extension enable failed. Please enable manually via GNOME Extensions app or restart GNOME Shell."
+    "Main.extensionManager.reloadExtensions()" 2>/dev/null || true
+  sleep 3
+
+  if extension_exists; then
+    gnome-extensions enable dash-to-panel@jderose9.github.com || \
+      echo "⚠️ Extension found but enable failed. Manual enabling may be required."
+  else
+    echo "⚠️ Extension still not detected. Please restart GNOME Shell and enable manually."
   fi
 fi
 
@@ -140,33 +174,72 @@ fi
 echo "→ 10. Configuring Dash-to-Panel layout & stacking…"
 SCHEMA="org.gnome.shell.extensions.dash-to-panel"
 
-# Position, size & anchor
-gsettings set $SCHEMA panel-position  'BOTTOM'
-gsettings set $SCHEMA panel-thickness 48        # px
-gsettings set $SCHEMA panel-length    100       # % of screen
-gsettings set $SCHEMA anchor          'CENTER'
+# Check if the schema exists before trying to configure it
+if gsettings list-schemas | grep -q "^$SCHEMA$"; then
+  echo "   → Schema found, applying configuration..."
 
-# Visibility
-gsettings set $SCHEMA show-applications-button true
-gsettings set $SCHEMA show-activities-button   true
-gsettings set $SCHEMA show-left-box            true
-gsettings set $SCHEMA show-taskbar             true
-gsettings set $SCHEMA show-center-box          true
-gsettings set $SCHEMA show-right-box           true
-gsettings set $SCHEMA show-date-menu           true
-gsettings set $SCHEMA show-system-menu         true
-gsettings set $SCHEMA show-desktop-button      true
+  # Position, size & anchor
+  gsettings set $SCHEMA panel-position  'BOTTOM'
+  gsettings set $SCHEMA panel-thickness 48        # px
+  gsettings set $SCHEMA panel-length    100       # % of screen
+  gsettings set $SCHEMA anchor          'CENTER'
 
-# Stacking: 'START' = left, 'END' = right
-gsettings set $SCHEMA applications-button-box 'START'
-gsettings set $SCHEMA activities-button-box     'START'
-gsettings set $SCHEMA left-box-box              'START'
-gsettings set $SCHEMA taskbar-box               'START'
-gsettings set $SCHEMA center-box-box            'END'
-gsettings set $SCHEMA right-box-box             'END'
-gsettings set $SCHEMA date-menu-box             'END'
-gsettings set $SCHEMA system-menu-box           'END'
-gsettings set $SCHEMA desktop-button-box        'END'
+  # Visibility
+  gsettings set $SCHEMA show-applications-button true
+  gsettings set $SCHEMA show-activities-button   true
+  gsettings set $SCHEMA show-left-box            true
+  gsettings set $SCHEMA show-taskbar             true
+  gsettings set $SCHEMA show-center-box          true
+  gsettings set $SCHEMA show-right-box           true
+  gsettings set $SCHEMA show-date-menu           true
+  gsettings set $SCHEMA show-system-menu         true
+  gsettings set $SCHEMA show-desktop-button      true
+
+  # Stacking: 'START' = left, 'END' = right
+  gsettings set $SCHEMA applications-button-box 'START'
+  gsettings set $SCHEMA activities-button-box     'START'
+  gsettings set $SCHEMA left-box-box              'START'
+  gsettings set $SCHEMA taskbar-box               'START'
+  gsettings set $SCHEMA center-box-box            'END'
+  gsettings set $SCHEMA right-box-box             'END'
+  gsettings set $SCHEMA date-menu-box             'END'
+  gsettings set $SCHEMA system-menu-box           'END'
+  gsettings set $SCHEMA desktop-button-box        'END'
+
+  echo "   ✓ Dash-to-Panel configuration applied"
+else
+  echo "⚠️ Dash-to-Panel schema not found. Extension may not be properly enabled."
+  echo "   Please enable the extension manually and restart GNOME Shell, then run:"
+  echo "   dconf load /org/gnome/shell/extensions/dash-to-panel/ < dash-to-panel-config.dconf"
+
+  # Create a backup configuration file for manual application
+  cat > ~/dash-to-panel-config.dconf << 'EOF'
+[/]
+panel-position='BOTTOM'
+panel-thickness=48
+panel-length=100
+anchor='CENTER'
+show-applications-button=true
+show-activities-button=true
+show-left-box=true
+show-taskbar=true
+show-center-box=true
+show-right-box=true
+show-date-menu=true
+show-system-menu=true
+show-desktop-button=true
+applications-button-box='START'
+activities-button-box='START'
+left-box-box='START'
+taskbar-box='START'
+center-box-box='END'
+right-box-box='END'
+date-menu-box='END'
+system-menu-box='END'
+desktop-button-box='END'
+EOF
+  echo "   → Configuration saved to ~/dash-to-panel-config.dconf for manual application"
+fi
 
 echo "→ 11. Configuring Plank to autostart…"
 mkdir -p ~/.config/autostart
@@ -178,4 +251,22 @@ Exec=plank
 X-GNOME-Autostart-enabled=true
 EOF
 
-echo "✅ All done! Your Windows-style Ubuntu desktop is ready—no logout required."
+echo "✅ Installation complete!"
+echo ""
+echo "🎨 Theme and icons applied successfully"
+echo "📂 Plank dock configured to autostart"
+echo ""
+
+# Check final status and provide guidance
+if extension_enabled 2>/dev/null; then
+  echo "✅ Dash-to-Panel extension is enabled and configured"
+  echo "🎉 Your Windows-style Ubuntu desktop is ready—no logout required!"
+else
+  echo "⚠️  Manual steps needed:"
+  echo "   1. Press Alt+F2, type 'r', and press Enter to restart GNOME Shell"
+  echo "   2. Open 'Extensions' app and enable 'Dash to Panel'"
+  echo "   3. If configuration is needed, run:"
+  echo "      dconf load /org/gnome/shell/extensions/dash-to-panel/ < ~/dash-to-panel-config.dconf"
+  echo ""
+  echo "🔄 After completing these steps, your Windows-style desktop will be ready!"
+fi
