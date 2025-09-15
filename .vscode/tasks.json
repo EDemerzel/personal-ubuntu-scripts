@@ -90,7 +90,7 @@
         "-NoProfile",
         "-NonInteractive",
         "-Command",
-        "Get-ChildItem -Path . -Filter '*.ps1' -Recurse | ForEach-Object { Write-Host \"Analyzing: $($_.FullName)\"; Invoke-ScriptAnalyzer -Path $_.FullName -Settings '.vscode/PSScriptAnalyzerSettings.psd1' }"
+        "if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) { try { Install-Module PSScriptAnalyzer -Scope CurrentUser -Force -ErrorAction Stop } catch { Write-Warning 'PSScriptAnalyzer not installed and could not auto-install. Skipping analysis.'; exit 0 } }; Get-ChildItem -Path . -Filter '*.ps1' -Recurse | ForEach-Object { Write-Host \"Analyzing: $($_.FullName)\"; Invoke-ScriptAnalyzer -Path $_.FullName -Settings '.vscode/PSScriptAnalyzerSettings.psd1' }"
       ],
       "group": "test",
       "presentation": {
@@ -190,7 +190,7 @@
         "-m",
         "flake8",
         "{}",
-        ";"
+        "\\;"
       ],
       "group": "test",
       "presentation": {
@@ -271,7 +271,7 @@
         "-m",
         "mypy",
         "{}",
-        ";"
+        "\\;"
       ],
       "group": "test",
       "presentation": {
@@ -350,7 +350,7 @@
         "-m",
         "black",
         "{}",
-        ";"
+        "\\;"
       ],
       "group": "build",
       "presentation": {

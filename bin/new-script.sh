@@ -78,7 +78,7 @@ Examples:
 
 The script will:
 1. Create a new directory named <script-name>
-2. Copy template files (README.md, LICENSE, script file)
+2. Copy template files (README.md, script file)
 3. Replace placeholders with actual values
 4. Make the script executable (Bash/Python) or set appropriate metadata (PowerShell)
 5. Update the root README.md scripts list
@@ -225,8 +225,21 @@ main() {
   # Create target directory
   mkdir -p "$target_dir"
 
-  # Copy template files
-  cp -r "$template_dir"/* "$target_dir/"
+  # Copy template files (exclude LICENSE in business branch)
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --exclude 'LICENSE' "$template_dir"/ "$target_dir"/
+  else
+    # Fallback to cp - omit LICENSE explicitly if present
+    shopt -s dotglob
+    for f in "$template_dir"/*; do
+      base="$(basename "$f")"
+      if [[ "$base" == "LICENSE" ]]; then
+        continue
+      fi
+      cp -r "$f" "$target_dir/"
+    done
+    shopt -u dotglob
+  fi
 
   # Rename script file to match script name and extension
   if [[ "$use_powershell" == "true" ]]; then
@@ -252,7 +265,6 @@ main() {
   info "Created script directory: $script_name/"
   info "Files created:"
   info "  - $script_name/README.md"
-  info "  - $script_name/LICENSE"
   if [[ "$use_powershell" == "true" ]]; then
     info "  - $script_name/$script_name.ps1"
   elif [[ "$use_python" == "true" ]]; then

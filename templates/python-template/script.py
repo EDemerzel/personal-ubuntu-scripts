@@ -2,11 +2,8 @@
 """
 {{SCRIPT_NAME}} - {{DESCRIPTION}}
 
-A Python script created from template on {{DATE}}.
-
-Author: {{AUTHOR}}
-Created: {{DATE}}
-License: MIT
+Business automation script generated on {{DATE}}.
+Owner: {{AUTHOR}}
 """
 
 import argparse
@@ -113,7 +110,8 @@ def load_config(config_path: Path) -> Dict[str, Any]:
                      config_path, e)
         return {}
     except (OSError, IOError) as e:
-        logger.error("Error reading configuration file %s: %s", config_path, e)
+        logger.error("Error reading configuration file %s: %s",
+                     config_path, e)
         return {}
 
 
@@ -146,8 +144,16 @@ def main() -> int:
     )
 
     # Add your custom arguments here
-    # parser.add_argument('input_file', type=Path, help='Input file to process')
-    # parser.add_argument('--output', '-o', type=Path, help='Output file path')
+    # parser.add_argument(
+    #     'input_file',
+    #     type=Path,
+    #     help='Input file to process'
+    # )
+    # parser.add_argument(
+    #     '--output', '-o',
+    #     type=Path,
+    #     help='Output file path'
+    # )
 
     args = parser.parse_args()
 

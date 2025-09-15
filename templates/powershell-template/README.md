@@ -74,6 +74,6 @@ The script includes comprehensive error handling:
 - Detailed error messages with debug information
 - Graceful failure with appropriate exit codes
 
-## License
+## Notes
 
-See `LICENSE` file in this directory.
+These scripts are intended for internal business use.

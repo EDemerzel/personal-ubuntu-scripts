@@ -35,6 +35,6 @@ Detailed explanation of what the script accomplishes:
 - Does it modify system files?
 - Any other important warnings or considerations
 
-## License
+## Notes
 
-See `LICENSE` file in this directory.
+These scripts are intended for internal business use.

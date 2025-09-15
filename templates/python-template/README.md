@@ -4,7 +4,7 @@
 
 ## Description
 
-A Python script created on {{DATE}} by {{AUTHOR}}.
+Business automation Python script created on {{DATE}} by {{AUTHOR}}.
 
 ## Requirements
 
@@ -124,10 +124,6 @@ To add functionality:
    - `run_command()` for executing shell commands
    - `load_config()` for configuration management
    - `setup_logging()` for logging configuration
-
-## License
-
-MIT License - see LICENSE file for details.
 
 ## Author
 

@@ -1,6 +1,6 @@
-# Personal Ubuntu Scripts
+# Business Ubuntu Scripts
 
-A growing collection of small, single-purpose scripts I use on Ubuntu. Each script lives in its own folder with its own README and (optionally) LICENSE. The goal is to keep things simple, discoverable, and easy to run on a fresh system.
+A curated collection of internal, business-focused automation scripts for Ubuntu. Each script lives in its own folder with its own README. The goal is to keep things simple, repeatable, and safe to run across business environments.
 
 ## Language Support
 
@@ -20,7 +20,7 @@ Scripts are organized by purpose, not language, so you'll find the best tool for
     - `*.sh` — executable shell script(s) (Bash)
     - `*.ps1` — executable PowerShell script(s) (PowerShell 7+)
     - `*.py` — executable Python script(s) (Python 3.8+)
-    - `LICENSE` (optional) — license for that script if it differs or is specified per-folder
+  - Any additional supporting files specific to the script
 
 ## Getting started
 
@@ -92,13 +92,13 @@ Scripts are organized by purpose, not language, so you'll find the best tool for
 ## Current scripts
 
 <!-- scripts:start -->
-- `make-ubuntu-windowsy/` — Make Ubuntu Windowsy
+- `dotnet-full-clean/` — dotnet-full-clean
 
 <!-- scripts:end -->
 
 ## Adding new scripts
 
-Use the scaffolding tool to create new script directories:
+Use the scaffolding tool to create new business script directories:
 
 ```bash
 ./bin/new-script.sh [--powershell|--python] <script-name> [description]
@@ -128,16 +128,15 @@ Use the scaffolding tool to create new script directories:
 This creates a new folder with:
 
 - `README.md` template with placeholders filled in
-- `LICENSE` file (MIT by default)
 - `<script-name>.sh`, `<script-name>.ps1`, or `<script-name>.py` executable with boilerplate and best practices
 - Automatically updates this README's script list
 
-## Contributing / personal notes
+## Contributing / internal notes
 
 - New scripts should follow the same folder-per-script pattern and include a minimal `README.md` explaining purpose, prerequisites, and usage.
 - Keep scripts idempotent where practical and avoid destructive defaults.
 - Prefer standard Ubuntu repositories/tools where possible; clearly call out any third-party sources.
 
-## Licensing
+## Usage and distribution
 
-Licensing may be defined per script folder (via a `LICENSE` file in that folder). Refer to each script's folder for its license and usage terms.
+These scripts are intended for internal business use. Distribution outside the organization should be reviewed and approved.
