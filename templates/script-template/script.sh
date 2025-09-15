@@ -15,19 +15,43 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Debug mode
+DEBUG=${DEBUG:-false}
+
+# Logging functions
+log_debug() {
+  if [[ "$DEBUG" == "true" ]]; then
+    echo -e "${BLUE}🔍 DEBUG: $*${NC}" >&2
+  fi
+}
+
+log_info() {
+  echo -e "${GREEN}ℹ️  $*${NC}"
+}
+
+log_warn() {
+  echo -e "${YELLOW}⚠️  $*${NC}" >&2
+}
+
+log_error() {
+  echo -e "${RED}❌ $*${NC}" >&2
+}
+
+# Legacy functions for backward compatibility
 error() {
-  echo -e "${RED}Error: $*${NC}" >&2
+  log_error "$*"
   exit 1
 }
 
 info() {
-  echo -e "${GREEN}Info: $*${NC}"
+  log_info "$*"
 }
 
 warn() {
-  echo -e "${YELLOW}Warning: $*${NC}"
+  log_warn "$*"
 }
 
 # Function to check if running as root (if needed)
@@ -49,7 +73,8 @@ check_dependencies() {
 
 # Main function
 main() {
-  info "Starting {{SCRIPT_NAME}}"
+  log_info "Starting {{SCRIPT_NAME}}"
+  log_debug "Debug mode enabled"
 
   # Uncomment if root check is needed
   # check_root
@@ -60,7 +85,7 @@ main() {
   # Your script logic here
   echo "Hello from {{SCRIPT_NAME}}!"
 
-  info "{{SCRIPT_NAME}} completed successfully"
+  log_info "{{SCRIPT_NAME}} completed successfully"
 }
 
 # Only run main if script is executed directly (not sourced)

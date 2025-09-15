@@ -1,10 +1,10 @@
 # Make Ubuntu Windowsy
 
-Automate turning a fresh Ubuntu 24.10 GNOME desktop into a Windows-style environment with a single script.
+Automate turning a fresh Ubuntu GNOME desktop into a Windows-style environment with a single script.
 
 ## Overview
 
-This script transforms a default Ubuntu 24.10 GNOME desktop into a Windows-like interface by:
+This script transforms a default Ubuntu GNOME desktop into a Windows-like interface by:
 
 - **Installing WhiteSur GTK theme & icon pack** - Provides a clean, Windows-inspired visual style
 - **Setting up Dash-to-Panel** - Creates a bottom taskbar similar to Windows
@@ -16,17 +16,17 @@ The script handles all the complex setup automatically, including GNOME Shell ex
 
 ## Features
 
-✅ **Smart version detection** - Automatically detects GNOME Shell version (45, 46, 47, or 48) and installs the correct Dash-to-Panel release  
-✅ **Complete theming** - WhiteSur GTK theme and icon pack for a cohesive Windows look  
-✅ **Bottom taskbar** - Dash-to-Panel configured with Windows-style layout and positioning  
-✅ **System font** - Segoe UI font installation and configuration  
-✅ **Dock integration** - Plank dock with autostart configuration  
-✅ **Settings backup** - Automatically backs up your current GNOME settings  
-✅ **Live reload** - Extensions are reloaded without requiring logout  
+✅ **Smart version detection** - Automatically detects GNOME Shell version (45, 46, 47, or 48) and installs the correct Dash-to-Panel release
+✅ **Complete theming** - WhiteSur GTK theme and icon pack for a cohesive Windows look
+✅ **Bottom taskbar** - Dash-to-Panel configured with Windows-style layout and positioning
+✅ **System font** - Segoe UI font installation and configuration
+✅ **Dock integration** - Plank dock with autostart configuration
+✅ **Settings backup** - Automatically backs up your current GNOME settings
+✅ **Live reload** - Extensions are reloaded without requiring logout
 
 ## Prerequisites
 
-- Ubuntu 24.10 with GNOME Shell
+- Ubuntu 24.04+ with GNOME Shell
 - GNOME Shell version 45, 46, 47, or 48
 - Internet connection for downloading themes and extensions
 - No additional PPAs required
@@ -198,6 +198,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - [WhiteSur GTK Theme](https://github.com/vinceliuice/WhiteSur-gtk-theme) by vinceliuice
-- [WhiteSur Icon Theme](https://github.com/vinceliuice/WhiteSur-icon-theme) by vinceliuice  
+- [WhiteSur Icon Theme](https://github.com/vinceliuice/WhiteSur-icon-theme) by vinceliuice
 - [Dash-to-Panel](https://github.com/home-sweet-gnome/dash-to-panel) by home-sweet-gnome
 - [Plank](https://launchpad.net/plank) - Simple, clean dock
