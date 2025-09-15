@@ -48,6 +48,7 @@ build/
 !.vscode/extensions.json
 !.vscode/tasks.json
 !.vscode/launch.json
+!.vscode/PSScriptAnalyzerSettings.psd1
 
 # Virtual environments (if any scripts set one up)
 .venv/

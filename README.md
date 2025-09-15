@@ -4,10 +4,11 @@ A growing collection of small, single-purpose scripts I use on Ubuntu. Each scri
 
 ## Language Support
 
-This repository supports both **Bash** and **PowerShell** scripts:
+This repository supports **Bash**, **PowerShell**, and **Python** scripts:
 
 - **Bash scripts** (`.sh`) — Traditional shell scripts for Ubuntu/Linux environments
 - **PowerShell scripts** (`.ps1`) — Cross-platform PowerShell 7+ scripts that work on Linux, macOS, and Windows
+- **Python scripts** (`.py`) — Python 3.8+ scripts with comprehensive tooling and best practices
 
 Scripts are organized by purpose, not language, so you'll find the best tool for each task regardless of implementation language.
 
@@ -18,6 +19,7 @@ Scripts are organized by purpose, not language, so you'll find the best tool for
     - `README.md` — details, options, and what the script does
     - `*.sh` — executable shell script(s) (Bash)
     - `*.ps1` — executable PowerShell script(s) (PowerShell 7+)
+    - `*.py` — executable Python script(s) (Python 3.8+)
     - `LICENSE` (optional) — license for that script if it differs or is specified per-folder
 
 ## Getting started
@@ -47,6 +49,20 @@ Scripts are organized by purpose, not language, so you'll find the best tool for
    ./your-script.ps1
    ```
 
+   **For Python scripts:**
+
+   ```bash
+   # Run with Python (requires Python 3.8+ installed)
+   python3 ./your-script.py
+
+   # Or make executable and run directly (Linux/macOS)
+   chmod +x ./your-script.py
+   ./your-script.py
+
+   # With additional arguments
+   python3 ./your-script.py --verbose --dry-run
+   ```
+
 ### Notes and recommendations
 
 - **PowerShell 7+ Installation:** For PowerShell scripts, ensure PowerShell 7+ is installed:
@@ -57,6 +73,16 @@ Scripts are organized by purpose, not language, so you'll find the best tool for
 
   # Or via snap
   sudo snap install powershell --classic
+  ```
+
+- **Python 3.8+ Installation:** For Python scripts, ensure Python 3.8+ is installed:
+
+  ```bash
+  # Ubuntu/Debian (usually pre-installed)
+  sudo apt install python3 python3-pip
+
+  # Install common linting tools (optional)
+  pip3 install flake8 black mypy
   ```
 
 - Review scripts before running them, especially those that modify system settings or install packages.
@@ -75,7 +101,7 @@ Scripts are organized by purpose, not language, so you'll find the best tool for
 Use the scaffolding tool to create new script directories:
 
 ```bash
-./bin/new-script.sh <script-name> [description]
+./bin/new-script.sh [--powershell|--python] <script-name> [description]
 ```
 
 **Creating Bash scripts (default):**
@@ -92,11 +118,18 @@ Use the scaffolding tool to create new script directories:
 ./bin/new-script.sh --powershell setup-dev-env "Configure development environment"
 ```
 
+**Creating Python scripts:**
+
+```bash
+./bin/new-script.sh --python data-processor "Process and analyze data files"
+./bin/new-script.sh --python system-monitor "Monitor system resources and generate reports"
+```
+
 This creates a new folder with:
 
 - `README.md` template with placeholders filled in
 - `LICENSE` file (MIT by default)
-- `<script-name>.sh` or `<script-name>.ps1` executable with boilerplate and best practices
+- `<script-name>.sh`, `<script-name>.ps1`, or `<script-name>.py` executable with boilerplate and best practices
 - Automatically updates this README's script list
 
 ## Contributing / personal notes

@@ -169,6 +169,256 @@
       }
     },
     {
+      "label": "Python Lint All Scripts",
+      "type": "shell",
+      "command": "find",
+      "args": [
+        ".",
+        "-name",
+        "*.py",
+        "-not",
+        "-path",
+        "./.venv/*",
+        "-not",
+        "-path",
+        "./venv/*",
+        "-not",
+        "-path",
+        "./*env/*",
+        "-exec",
+        "python3",
+        "-m",
+        "flake8",
+        "{}",
+        ";"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": {
+        "owner": "python",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s+(\\w+)\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      }
+    },
+    {
+      "label": "Python Lint Current Script",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "-m",
+        "flake8",
+        "${file}"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": {
+        "owner": "python",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s+(\\w+)\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      }
+    },
+    {
+      "label": "Python Type Check All Scripts",
+      "type": "shell",
+      "command": "find",
+      "args": [
+        ".",
+        "-name",
+        "*.py",
+        "-not",
+        "-path",
+        "./.venv/*",
+        "-not",
+        "-path",
+        "./venv/*",
+        "-not",
+        "-path",
+        "./*env/*",
+        "-exec",
+        "python3",
+        "-m",
+        "mypy",
+        "{}",
+        ";"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": {
+        "owner": "python",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.+):(\\d+):\\s+(\\w+):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "severity": 3,
+          "message": 4
+        }
+      }
+    },
+    {
+      "label": "Python Type Check Current Script",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "-m",
+        "mypy",
+        "${file}"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": {
+        "owner": "python",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.+):(\\d+):\\s+(\\w+):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "severity": 3,
+          "message": 4
+        }
+      }
+    },
+    {
+      "label": "Python Format All Scripts",
+      "type": "shell",
+      "command": "find",
+      "args": [
+        ".",
+        "-name",
+        "*.py",
+        "-not",
+        "-path",
+        "./.venv/*",
+        "-not",
+        "-path",
+        "./venv/*",
+        "-not",
+        "-path",
+        "./*env/*",
+        "-exec",
+        "python3",
+        "-m",
+        "black",
+        "{}",
+        ";"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "label": "Python Format Current Script",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "-m",
+        "black",
+        "${file}"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Python Syntax Check",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "-m",
+        "py_compile",
+        "${file}"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Validate All Scripts (Bash + PowerShell + Python)",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "Shellcheck All Scripts",
+        "PowerShell Script Analysis All",
+        "Python Lint All Scripts",
+        "Python Type Check All Scripts"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
+    },
+    {
       "label": "Validate All Scripts (Bash + PowerShell)",
       "dependsOrder": "parallel",
       "dependsOn": [

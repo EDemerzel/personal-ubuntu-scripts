@@ -3,14 +3,15 @@ set -euo pipefail
 
 # new-script.sh - Create a new script folder from template
 #
-# Usage: ./bin/new-script.sh [--powershell] <script-name> [description]
+# Usage: ./bin/new-script.sh [--powershell|--python] <script-name> [description]
 #
 # Creates a new script directory with boilerplate files from the template.
-# Supports both Bash and PowerShell script creation.
+# Supports Bash, PowerShell, and Python script creation.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 BASH_TEMPLATE_DIR="$ROOT_DIR/templates/script-template"
 POWERSHELL_TEMPLATE_DIR="$ROOT_DIR/templates/powershell-template"
+PYTHON_TEMPLATE_DIR="$ROOT_DIR/templates/python-template"
 
 # Color output helpers
 RED='\033[0;31m'
@@ -57,12 +58,13 @@ warn() {
 
 usage() {
   cat << EOF
-Usage: $0 [--powershell] <script-name> [description]
+Usage: $0 [--powershell|--python] <script-name> [description]
 
 Creates a new script directory with boilerplate files.
 
 Options:
   --powershell  Create a PowerShell script instead of a Bash script
+  --python      Create a Python script instead of a Bash script
 
 Arguments:
   script-name   Name of the script (will be used for directory and main script file)
@@ -72,12 +74,13 @@ Examples:
   $0 backup-dotfiles "Backup user dotfiles to cloud storage"
   $0 setup-dev-env "Configure development environment"
   $0 --powershell get-system-info "Get detailed system information"
+  $0 --python data-processor "Process and analyze data files"
 
 The script will:
 1. Create a new directory named <script-name>
 2. Copy template files (README.md, LICENSE, script file)
 3. Replace placeholders with actual values
-4. Make the script executable (Bash) or set appropriate metadata (PowerShell)
+4. Make the script executable (Bash/Python) or set appropriate metadata (PowerShell)
 5. Update the root README.md scripts list
 EOF
 }
@@ -117,6 +120,7 @@ replace_placeholders() {
 main() {
   # Parse arguments
   local use_powershell=false
+  local use_python=false
   local script_name=""
   local description=""
 
@@ -125,6 +129,10 @@ main() {
     case $1 in
       --powershell)
         use_powershell=true
+        shift
+        ;;
+      --python)
+        use_python=true
         shift
         ;;
       --help|-h)
@@ -147,10 +155,21 @@ main() {
     esac
   done
 
+  # Validate that only one script type is selected
+  local selected_types=0
+  [[ "$use_powershell" == "true" ]] && selected_types=$((selected_types + 1))
+  [[ "$use_python" == "true" ]] && selected_types=$((selected_types + 1))
+
+  if [[ $selected_types -gt 1 ]]; then
+    error "Cannot specify multiple script types. Choose one of: --powershell, --python, or default (Bash)"
+  fi
+
   # Set default description
   if [[ -z "$description" ]]; then
     if [[ "$use_powershell" == "true" ]]; then
       description="A useful PowerShell script"
+    elif [[ "$use_python" == "true" ]]; then
+      description="A useful Python script"
     else
       description="A useful Ubuntu script"
     fi
@@ -178,6 +197,10 @@ main() {
     template_dir="$POWERSHELL_TEMPLATE_DIR"
     script_extension="ps1"
     script_type="PowerShell"
+  elif [[ "$use_python" == "true" ]]; then
+    template_dir="$PYTHON_TEMPLATE_DIR"
+    script_extension="py"
+    script_type="Python"
   else
     template_dir="$BASH_TEMPLATE_DIR"
     script_extension="sh"
@@ -208,6 +231,8 @@ main() {
   # Rename script file to match script name and extension
   if [[ "$use_powershell" == "true" ]]; then
     mv "$target_dir/script.ps1" "$target_dir/$script_name.ps1"
+  elif [[ "$use_python" == "true" ]]; then
+    mv "$target_dir/script.py" "$target_dir/$script_name.py"
   else
     mv "$target_dir/script.sh" "$target_dir/$script_name.sh"
   fi
@@ -219,9 +244,9 @@ main() {
     fi
   done
 
-  # Make script executable (Bash only)
+  # Make script executable (Bash and Python)
   if [[ "$use_powershell" == "false" ]]; then
-    chmod +x "$target_dir/$script_name.sh"
+    chmod +x "$target_dir/$script_name.$script_extension"
   fi
 
   info "Created script directory: $script_name/"
@@ -230,6 +255,8 @@ main() {
   info "  - $script_name/LICENSE"
   if [[ "$use_powershell" == "true" ]]; then
     info "  - $script_name/$script_name.ps1"
+  elif [[ "$use_python" == "true" ]]; then
+    info "  - $script_name/$script_name.py (executable)"
   else
     info "  - $script_name/$script_name.sh (executable)"
   fi

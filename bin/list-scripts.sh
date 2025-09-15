@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Update the "Current scripts" section in the root README.md by listing all
-# first-level directories that contain at least one .sh or .ps1 file (or a README.md),
+# first-level directories that contain at least one .sh, .ps1, or .py file (or a README.md),
 # excluding common non-script folders.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
@@ -40,18 +40,27 @@ render_line() {
     summary=${summary###}
     summary=${summary##\#}
     summary=${summary#"${summary%%[![:space:]]*}"}  # Remove leading whitespace
-  elif compgen -G "$path/*.sh" >/dev/null || compgen -G "$path/*.ps1" >/dev/null; then
+  elif compgen -G "$path/*.sh" >/dev/null || compgen -G "$path/*.ps1" >/dev/null || compgen -G "$path/*.py" >/dev/null; then
     # Detect script type and provide appropriate summary
-    local has_bash has_powershell
+    local has_bash has_powershell has_python
     has_bash=$(compgen -G "$path/*.sh" >/dev/null && echo "true" || echo "false")
     has_powershell=$(compgen -G "$path/*.ps1" >/dev/null && echo "true" || echo "false")
+    has_python=$(compgen -G "$path/*.py" >/dev/null && echo "true" || echo "false")
 
-    if [[ "$has_bash" == "true" && "$has_powershell" == "true" ]]; then
-      summary="Bash and PowerShell scripts"
-    elif [[ "$has_powershell" == "true" ]]; then
-      summary="PowerShell scripts"
+    local script_types=()
+    [[ "$has_bash" == "true" ]] && script_types+=("Bash")
+    [[ "$has_powershell" == "true" ]] && script_types+=("PowerShell")
+    [[ "$has_python" == "true" ]] && script_types+=("Python")
+
+    if [[ ${#script_types[@]} -gt 1 ]]; then
+      # Join with "and" for multiple types
+      local last_type="${script_types[-1]}"
+      unset 'script_types[-1]'
+      summary="$(IFS=", "; echo "${script_types[*]}") and $last_type scripts"
+    elif [[ ${#script_types[@]} -eq 1 ]]; then
+      summary="${script_types[0]} scripts"
     else
-      summary="Shell scripts"
+      summary="Scripts"
     fi
   fi
 
@@ -69,7 +78,7 @@ for d in "${DIRS[@]}"; do
     continue
   fi
   # Only include folders that look like script folders
-  if compgen -G "$ROOT_DIR/$d/*.sh" >/dev/null || compgen -G "$ROOT_DIR/$d/*.ps1" >/dev/null || [[ -f "$ROOT_DIR/$d/README.md" ]]; then
+  if compgen -G "$ROOT_DIR/$d/*.sh" >/dev/null || compgen -G "$ROOT_DIR/$d/*.ps1" >/dev/null || compgen -G "$ROOT_DIR/$d/*.py" >/dev/null || [[ -f "$ROOT_DIR/$d/README.md" ]]; then
     SECTION+="$(render_line "$d")\n"
   fi
 done

@@ -20,7 +20,8 @@
     "*.sh": "shellscript",
     "*.ps1": "powershell",
     "*.psm1": "powershell",
-    "*.psd1": "powershell"
+    "*.psd1": "powershell",
+    "*.py": "python"
   },
   "markdownlint.ignore": [
     ".shellcheckrc",
@@ -53,6 +54,29 @@
   "powershell.integratedConsole.showOnStartup": false,
   "powershell.scriptAnalysis.enable": true,
   "powershell.scriptAnalysis.settingsPath": ".vscode/PSScriptAnalyzerSettings.psd1",
+  "python.defaultInterpreterPath": "/usr/bin/python3",
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": true,
+  "python.linting.flake8Enabled": true,
+  "python.linting.mypyEnabled": true,
+  "python.linting.lintOnSave": true,
+  "python.linting.pylintArgs": [
+    "--disable=C0114,C0115,C0116",
+    "--max-line-length=88"
+  ],
+  "python.linting.flake8Args": [
+    "--max-line-length=88",
+    "--extend-ignore=E203,W503"
+  ],
+  "python.formatting.provider": "black",
+  "python.formatting.blackArgs": [
+    "--line-length=88"
+  ],
+  "python.sortImports.args": [
+    "--profile=black"
+  ],
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
   "files.eol": "\n",
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,
