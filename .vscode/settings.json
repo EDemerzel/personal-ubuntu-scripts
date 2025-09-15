@@ -16,7 +16,8 @@
     "SECURITY": "markdown",
     "SUPPORT": "markdown",
     ".shellcheckrc": "ini",
-    ".markdownlintignore": "plaintext"
+    ".markdownlintignore": "plaintext",
+    "*.sh": "shellscript"
   },
   "markdownlint.ignore": [
     ".shellcheckrc",
@@ -25,5 +26,21 @@
     ".editorconfig",
     ".gitignore",
     ".vscode/**"
-  ]
+  ],
+  "shellcheck.enable": true,
+  "shellcheck.executablePath": "",
+  "shellcheck.run": "onType",
+  "shellcheck.exclude": [
+    "SC1091"
+  ],
+  "shellcheck.ignorePatterns": {
+    "**/.git/**": true,
+    "**/node_modules/**": true
+  },
+  "files.eol": "\n",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "editor.detectIndentation": false,
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true
 }

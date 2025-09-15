@@ -1,14 +1,14 @@
-# ShellCheck configuration
-# See: https://www.shellcheck.net/wiki/
+# Shellcheck configuration file
+# This configures shellcheck behavior for the personal-ubuntu-scripts repository
 
-# Enable all checks by default, but you can selectively disable noisy ones here.
+# Disable checking of external sources we can't control
+disable=SC1091
+
+# Disable warnings about variables from sourced system files
+disable=SC2154
+
+# Enable comprehensive checking
+enable=check-sourced
+
+# Set shell dialect
 shell=bash
-format=tty
-
-# Common suppressions (uncomment as needed):
-# disable=SC1090,SC1091  # Sourcing files that may not exist at lint time
-# disable=SC2002         # Useless cat (sometimes intentional for readability)
-# disable=SC2086         # Double quote to prevent globbing and word splitting
-
-# External sources search path (if you use .d includes)
-# source-path=SCRIPTDIR:.
