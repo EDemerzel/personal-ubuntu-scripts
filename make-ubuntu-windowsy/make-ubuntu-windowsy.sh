@@ -31,7 +31,6 @@ set -eo pipefail  # Remove 'u' flag to allow unset variables in conditionals
 # Configuration constants
 readonly EXTENSION_WAIT_TIME=${EXTENSION_WAIT_TIME:-3}
 readonly RETRY_WAIT_TIME=${RETRY_WAIT_TIME:-2}
-readonly BACKUP_PREFIX="gnome-settings-backup"  # Used in backup functions (TODO: implement)
 readonly DEBUG=${DEBUG:-false}
 
 # Required packages for the script to function
@@ -89,10 +88,13 @@ detect_ubuntu_version() {
     local version_id
 
     # Source the os-release file to get version info
+    # shellcheck source=/etc/os-release
     source /etc/os-release
 
     ubuntu_version="$NAME"
+    # shellcheck disable=SC2153  # VERSION_CODENAME and VERSION_ID are from sourced file
     version_codename="$VERSION_CODENAME"
+    # shellcheck disable=SC2153
     version_id="$VERSION_ID"
 
     if [[ "$ubuntu_version" =~ Ubuntu ]]; then
@@ -100,6 +102,14 @@ detect_ubuntu_version() {
       export UBUNTU_CODENAME="$version_codename"
       log_info "Detected $ubuntu_version ($version_codename)"
       log_debug "Ubuntu version: $version_id, codename: $version_codename"
+
+        # Check minimum Ubuntu version requirement
+        if ! check_ubuntu_compatibility "$version_id"; then
+          log_error "This script requires Ubuntu 24.04 or later"
+          log_error "Current version: $version_id ($version_codename)"
+          return 1
+        fi
+
       return 0
     else
       log_warn "Not running on Ubuntu (detected: $ubuntu_version)"
@@ -113,6 +123,37 @@ detect_ubuntu_version() {
     export UBUNTU_VERSION="unknown"
     export UBUNTU_CODENAME="unknown"
     return 1
+  fi
+}
+
+# Check if Ubuntu version meets minimum requirements
+check_ubuntu_compatibility() {
+  local version="$1"
+
+  # Handle unknown version
+  if [[ "$version" == "unknown" || -z "$version" ]]; then
+    log_warn "Cannot verify Ubuntu version compatibility"
+    return 0  # Allow to proceed with warning
+  fi
+
+  # Extract major and minor version numbers
+  if [[ "$version" =~ ^([0-9]+)\.([0-9]+) ]]; then
+    local major="${BASH_REMATCH[1]}"
+    local minor="${BASH_REMATCH[2]}"
+
+    log_debug "Checking Ubuntu $major.$minor compatibility"
+
+    # Check if version is 24.04 or later
+    if [[ "$major" -gt 24 ]] || [[ "$major" -eq 24 && "$minor" -ge 4 ]]; then
+      log_debug "Ubuntu $version meets minimum requirement (24.04+)"
+      return 0
+    else
+      log_debug "Ubuntu $version below minimum requirement (24.04+)"
+      return 1
+    fi
+  else
+    log_warn "Cannot parse Ubuntu version format: $version"
+    return 0  # Allow to proceed with warning
   fi
 }
 
@@ -533,26 +574,26 @@ check_prerequisites() {
     echo
     if [[ ! "$continue_anyway" =~ ^[Yy]$ ]]; then
       log_info "Aborted by user."
-      exit 1
+        return 1
     fi
   fi
 
   # Check internet connectivity
   if ! ping -c 1 8.8.8.8 &>/dev/null; then
     log_error "No internet connection detected. This script requires internet access."
-    exit 1
+      return 1
   fi
 
   # Check for required commands (GNOME components, etc.)
   if ! check_required_commands; then
     log_error "Missing required system commands. Cannot proceed."
-    exit 1
+      return 1
   fi
 
   # Check and install required packages
   if ! check_required_packages; then
     log_error "Package verification failed. Cannot proceed."
-    exit 1
+      return 1
   fi
 
   log_info "Prerequisites check passed"
@@ -563,99 +604,174 @@ main() {
   log_info "Starting Ubuntu Windowsy transformation..."
   log_debug "Debug mode enabled"
 
-  check_prerequisites
+  log_info "→ 0. Checking prerequisites…"
+    if ! check_prerequisites; then
+      log_error "Prerequisites check failed. Cannot proceed."
+      exit 1
+    fi
+
+  log_info "→ 1. Backing up current GNOME settings…"
+  dconf dump / > "$HOME/gnome-settings-backup-$(date +%F).dconf" \
+    || log_warn "Backup failed—continuing anyway."
+
+  log_info "→ 2. Cleaning up previous artifacts…"
   cleanup_previous_artifacts
-  install_whitesur_theme
-  install_whitesur_icons
-  # Continue with remaining functions...
+
+  log_info "→ 3. Installing WhiteSur GTK theme…"
+    if ! install_whitesur_theme; then
+      log_error "WhiteSur theme installation failed. Cannot proceed."
+      exit 1
+    fi
+
+  log_info "→ 4. Installing WhiteSur icon pack…"
+    if ! install_whitesur_icons; then
+      log_error "WhiteSur icons installation failed. Cannot proceed."
+      exit 1
+    fi
+
+  log_info "→ 5. Installing Dash‑to‑Panel from source…"
+    if ! install_dash_to_panel; then
+      log_error "Dash-to-Panel installation failed. Cannot proceed."
+      exit 1
+    fi
+
+  log_info "→ 6. Enabling Dash-to-Panel extension…"
+  enable_dash_to_panel
+
+  log_info "→ 7. Applying theme and icons…"
+  apply_theme_settings
+
+  log_info "→ 8. Configuring system font…"
+  configure_system_font
+
+  log_info "→ 9. Setting up Plank dock…"
+  setup_plank
+
+  log_info "✅ Installation complete!"
+  display_completion_message
 }
-
-echo "→ 0. Checking prerequisites…"
-check_prerequisites
-
-echo "→ 1. Backing up current GNOME settings…"
-dconf dump / > "$HOME/gnome-settings-backup-$(date +%F).dconf" \
-  || echo "⚠️ Backup failed—continuing anyway."
 
 # Utility functions
 cleanup_previous_artifacts() {
-  echo "→ 2. Cleaning up previous artifacts…"
+  log_debug "Cleaning up previous artifacts…"
   rm -rf ~/WhiteSur-gtk-theme ~/.themes/WhiteSur*
   rm -rf ~/WhiteSur-icon-theme ~/.icons/WhiteSur*
   rm -rf ~/dash-to-panel-src
 }
 
 install_whitesur_theme() {
-  echo "→ 3. Installing WhiteSur GTK theme…"
+  log_debug "Installing WhiteSur GTK theme…"
   if ! git clone https://github.com/vinceliuice/WhiteSur-gtk-theme.git ~/WhiteSur-gtk-theme; then
-    echo "❌ Failed to clone WhiteSur GTK theme repository"
+    log_error "Failed to clone WhiteSur GTK theme repository"
     return 1
   fi
 
   if ! bash ~/WhiteSur-gtk-theme/install.sh -d ~/.themes; then
-    echo "❌ Failed to install WhiteSur GTK theme"
+    log_error "Failed to install WhiteSur GTK theme"
     return 1
   fi
 }
 
 install_whitesur_icons() {
-  echo "→ 4. Installing WhiteSur icon pack…"
+  log_debug "Installing WhiteSur icon pack…"
   if ! git clone https://github.com/vinceliuice/WhiteSur-icon-theme.git ~/WhiteSur-icon-theme; then
-    echo "❌ Failed to clone WhiteSur icon theme repository"
+    log_error "Failed to clone WhiteSur icon theme repository"
     return 1
   fi
 
   if ! bash ~/WhiteSur-icon-theme/install.sh -d ~/.icons; then
-    echo "❌ Failed to install WhiteSur icon theme"
+    log_error "Failed to install WhiteSur icon theme"
     return 1
   fi
 }
 
-cleanup_previous_artifacts
-install_whitesur_theme
-install_whitesur_icons
+install_dash_to_panel() {
+  # Verify GNOME environment and version
+  if ! detect_gnome_environment; then
+    log_error "GNOME environment not detected. This script requires GNOME Shell."
+    return 1
+  fi
 
-echo "→ 5. Installing Dash‑to‑Panel from source…"
+  if ! detect_gnome_version; then
+    log_error "Failed to detect GNOME Shell version"
+    return 1
+  fi
 
-# Verify GNOME environment and version
-if ! detect_gnome_environment; then
-  log_error "GNOME environment not detected. This script requires GNOME Shell."
-  exit 1
-fi
+  # Get appropriate Dash-to-Panel version
+  if ! TAG=$(get_dash_to_panel_version); then
+    log_error "Failed to determine Dash-to-Panel version"
+    return 1
+  fi
 
-if ! detect_gnome_version; then
-  log_error "Failed to detect GNOME Shell version"
-  exit 1
-fi
+  log_info "Installing Dash-to-Panel $TAG for GNOME Shell $GNOME_VER"
 
-# Get appropriate Dash-to-Panel version
-if ! TAG=$(get_dash_to_panel_version); then
-  log_error "Failed to determine Dash-to-Panel version"
-  exit 1
-fi
+  git clone https://github.com/home-sweet-gnome/dash-to-panel.git ~/dash-to-panel-src
+  cd ~/dash-to-panel-src
 
-log_info "Installing Dash-to-Panel $TAG for GNOME Shell $GNOME_VER"
+  if [[ -n "$TAG" ]]; then
+    log_debug "Checking out Dash-to-Panel tag $TAG…"
+    git fetch --tags
+    if git checkout "$TAG"; then
+      log_debug "Using tag $TAG"
+    else
+      log_warn "Tag $TAG not found; using default branch."
+    fi
+  else
+    log_debug "Using latest version for GNOME $GNOME_MAJOR."
+  fi
 
-git clone https://github.com/home-sweet-gnome/dash-to-panel.git ~/dash-to-panel-src
-cd ~/dash-to-panel-src
+  log_debug "Running 'make install'…"
+  make install       # compiles schemas & translations, installs to ~/.local/share/gnome-shell/extensions
+  cd -
+}
 
-if [[ -n "$TAG" ]]; then
-  echo "   → Checking out Dash-to-Panel tag $TAG…"
-  git fetch --tags
-  git checkout "$TAG" \
-    && echo "     ✓ Using tag $TAG" \
-    || echo "⚠️ Tag $TAG not found; using default branch."
-else
-  echo "   → Using latest version for GNOME $GNOME_MAJOR."
-fi
+enable_dash_to_panel() {
+  # Wait for GNOME Shell to detect the newly installed extension
+  sleep "$EXTENSION_WAIT_TIME"
 
-echo "   → Running 'make install'…"
-make install       # compiles schemas & translations, installs to ~/.local/share/gnome-shell/extensions
-cd -
+  # Try multiple approaches to enable the extension
+  if extension_exists; then
+    log_debug "Extension found, attempting to enable..."
+    if gnome-extensions enable dash-to-panel@jderose9.github.com; then
+      log_info "Extension enabled successfully"
+    else
+      log_warn "Direct enable failed, trying reload approach..."
+      # Force reload GNOME Shell extension system
+      gdbus call --session \
+        --dest org.gnome.Shell \
+        --object-path /org/gnome/Shell \
+        --method org.gnome.Shell.Eval \
+        "Main.extensionManager.reloadExtensions()" 2>/dev/null || true
+      sleep "$RETRY_WAIT_TIME"
+      gnome-extensions enable dash-to-panel@jderose9.github.com || \
+        log_warn "Extension enable failed. You may need to enable it manually after a GNOME Shell restart."
+    fi
+  else
+    log_warn "Extension not detected. Forcing extension system reload..."
+    # Try to force GNOME Shell to scan for new extensions
+    gdbus call --session \
+      --dest org.gnome.Shell \
+      --object-path /org/gnome/Shell \
+      --method org.gnome.Shell.Eval \
+      "Main.extensionManager.reloadExtensions()" 2>/dev/null || true
+    sleep "$EXTENSION_WAIT_TIME"
 
-echo "→ 6. Enabling Dash-to-Panel extension…"
-# Wait for GNOME Shell to detect the newly installed extension
-sleep "$EXTENSION_WAIT_TIME"
+    if extension_exists; then
+      gnome-extensions enable dash-to-panel@jderose9.github.com || \
+        log_warn "Extension found but enable failed. Manual enabling may be required."
+    else
+      log_warn "Extension still not detected. Please restart GNOME Shell and enable manually."
+    fi
+  fi
+
+  # Reload the extension in the running GNOME Shell
+  log_debug "Reloading Dash-to-Panel in the running GNOME Shell…"
+  gdbus call --session \
+    --dest org.gnome.Shell \
+    --object-path /org/gnome/Shell \
+    --method org.gnome.Shell.Eval \
+    "Main.extensionManager.reloadExtension('dash-to-panel@jderose9.github.com')"
+}
 
 # Function to check if extension exists
 extension_exists() {
@@ -667,105 +783,68 @@ extension_enabled() {
   gnome-extensions list --enabled | grep -q "dash-to-panel@jderose9.github.com"
 }
 
-# Try multiple approaches to enable the extension
-if extension_exists; then
-  echo "   → Extension found, attempting to enable..."
-  if gnome-extensions enable dash-to-panel@jderose9.github.com; then
-    echo "   ✓ Extension enabled successfully"
+apply_theme_settings() {
+  log_debug "Applying Windows-style theme, icon pack & Segoe UI font…"
+  gsettings set org.gnome.desktop.interface gtk-theme  'WhiteSur-light'
+  gsettings set org.gnome.desktop.interface icon-theme  'WhiteSur'
+  gsettings set org.gnome.desktop.interface font-name   'Segoe UI 10'
+
+  # Apply user-theme extension settings if available
+  if gsettings list-schemas | grep -q "org.gnome.shell.extensions.user-theme"; then
+    gsettings set org.gnome.shell.extensions.user-theme name 'WhiteSur-light'
   else
-    echo "⚠️ Direct enable failed, trying reload approach..."
-    # Force reload GNOME Shell extension system
-    gdbus call --session \
-      --dest org.gnome.Shell \
-      --object-path /org/gnome/Shell \
-      --method org.gnome.Shell.Eval \
-      "Main.extensionManager.reloadExtensions()" 2>/dev/null || true
-    sleep "$RETRY_WAIT_TIME"
-    gnome-extensions enable dash-to-panel@jderose9.github.com || \
-      echo "⚠️ Extension enable failed. You may need to enable it manually after a GNOME Shell restart."
+    log_warn "User-theme extension schema not found. Attempting to enable User Themes extension..."
+    gnome-extensions enable user-theme@gnome-shell-extensions.gcampax.github.com || \
+    log_warn "Please enable the User Themes extension manually via GNOME Extensions app."
   fi
-else
-  echo "⚠️ Extension not detected. Forcing extension system reload..."
-  # Try to force GNOME Shell to scan for new extensions
-  gdbus call --session \
-    --dest org.gnome.Shell \
-    --object-path /org/gnome/Shell \
-    --method org.gnome.Shell.Eval \
-    "Main.extensionManager.reloadExtensions()" 2>/dev/null || true
-  sleep "$EXTENSION_WAIT_TIME"
 
-  if extension_exists; then
-    gnome-extensions enable dash-to-panel@jderose9.github.com || \
-      echo "⚠️ Extension found but enable failed. Manual enabling may be required."
+  configure_dash_to_panel
+}
+
+configure_dash_to_panel() {
+  log_debug "Configuring Dash-to-Panel layout & stacking…"
+  local SCHEMA="org.gnome.shell.extensions.dash-to-panel"
+
+  # Check if the schema exists before trying to configure it
+  if gsettings list-schemas | grep -q "^$SCHEMA$"; then
+    log_debug "Schema found, applying configuration..."
+
+    # Position, size & anchor
+    gsettings set $SCHEMA panel-position  'BOTTOM'
+    gsettings set $SCHEMA panel-thickness 48        # px
+    gsettings set $SCHEMA panel-length    100       # % of screen
+    gsettings set $SCHEMA anchor          'CENTER'
+
+    # Visibility
+    gsettings set $SCHEMA show-applications-button true
+    gsettings set $SCHEMA show-activities-button   true
+    gsettings set $SCHEMA show-left-box            true
+    gsettings set $SCHEMA show-taskbar             true
+    gsettings set $SCHEMA show-center-box          true
+    gsettings set $SCHEMA show-right-box           true
+    gsettings set $SCHEMA show-date-menu           true
+    gsettings set $SCHEMA show-system-menu         true
+    gsettings set $SCHEMA show-desktop-button      true
+
+    # Stacking: 'START' = left, 'END' = right
+    gsettings set $SCHEMA applications-button-box 'START'
+    gsettings set $SCHEMA activities-button-box     'START'
+    gsettings set $SCHEMA left-box-box              'START'
+    gsettings set $SCHEMA taskbar-box               'START'
+    gsettings set $SCHEMA center-box-box            'END'
+    gsettings set $SCHEMA right-box-box             'END'
+    gsettings set $SCHEMA date-menu-box             'END'
+    gsettings set $SCHEMA system-menu-box           'END'
+    gsettings set $SCHEMA desktop-button-box        'END'
+
+    log_info "Dash-to-Panel configuration applied"
   else
-    echo "⚠️ Extension still not detected. Please restart GNOME Shell and enable manually."
-  fi
-fi
+    log_warn "Dash-to-Panel schema not found. Extension may not be properly enabled."
+    log_info "Please enable the extension manually and restart GNOME Shell, then run:"
+    log_info "dconf load /org/gnome/shell/extensions/dash-to-panel/ < dash-to-panel-config.dconf"
 
-echo "→ 7. Reloading Dash-to-Panel in the running GNOME Shell…"
-gdbus call --session \
-  --dest org.gnome.Shell \
-  --object-path /org/gnome/Shell \
-  --method org.gnome.Shell.Eval \
-  "Main.extensionManager.reloadExtension('dash-to-panel@jderose9.github.com')"
-
-echo "→ 8. Applying Windows-style theme, icon pack & Segoe UI font…"
-gsettings set org.gnome.desktop.interface gtk-theme  'WhiteSur-light'
-gsettings set org.gnome.desktop.interface icon-theme  'WhiteSur'
-gsettings set org.gnome.desktop.interface font-name   'Segoe UI 10'
-
-# Apply user-theme extension settings if available
-if gsettings list-schemas | grep -q "org.gnome.shell.extensions.user-theme"; then
-  gsettings set org.gnome.shell.extensions.user-theme name 'WhiteSur-light'
-else
-  echo "⚠️ User-theme extension schema not found. Attempting to enable User Themes extension..."
-  gnome-extensions enable user-theme@gnome-shell-extensions.gcampax.github.com || \
-  echo "⚠️ Please enable the User Themes extension manually via GNOME Extensions app."
-fi
-
-echo "→ 9. Configuring Dash-to-Panel layout & stacking…"
-SCHEMA="org.gnome.shell.extensions.dash-to-panel"
-
-# Check if the schema exists before trying to configure it
-if gsettings list-schemas | grep -q "^$SCHEMA$"; then
-  echo "   → Schema found, applying configuration..."
-
-  # Position, size & anchor
-  gsettings set $SCHEMA panel-position  'BOTTOM'
-  gsettings set $SCHEMA panel-thickness 48        # px
-  gsettings set $SCHEMA panel-length    100       # % of screen
-  gsettings set $SCHEMA anchor          'CENTER'
-
-  # Visibility
-  gsettings set $SCHEMA show-applications-button true
-  gsettings set $SCHEMA show-activities-button   true
-  gsettings set $SCHEMA show-left-box            true
-  gsettings set $SCHEMA show-taskbar             true
-  gsettings set $SCHEMA show-center-box          true
-  gsettings set $SCHEMA show-right-box           true
-  gsettings set $SCHEMA show-date-menu           true
-  gsettings set $SCHEMA show-system-menu         true
-  gsettings set $SCHEMA show-desktop-button      true
-
-  # Stacking: 'START' = left, 'END' = right
-  gsettings set $SCHEMA applications-button-box 'START'
-  gsettings set $SCHEMA activities-button-box     'START'
-  gsettings set $SCHEMA left-box-box              'START'
-  gsettings set $SCHEMA taskbar-box               'START'
-  gsettings set $SCHEMA center-box-box            'END'
-  gsettings set $SCHEMA right-box-box             'END'
-  gsettings set $SCHEMA date-menu-box             'END'
-  gsettings set $SCHEMA system-menu-box           'END'
-  gsettings set $SCHEMA desktop-button-box        'END'
-
-  echo "   ✓ Dash-to-Panel configuration applied"
-else
-  echo "⚠️ Dash-to-Panel schema not found. Extension may not be properly enabled."
-  echo "   Please enable the extension manually and restart GNOME Shell, then run:"
-  echo "   dconf load /org/gnome/shell/extensions/dash-to-panel/ < dash-to-panel-config.dconf"
-
-  # Create a backup configuration file for manual application
-  cat > ~/dash-to-panel-config.dconf << 'EOF'
+    # Create a backup configuration file for manual application
+    cat > ~/dash-to-panel-config.dconf << 'EOF'
 [/]
 panel-position='BOTTOM'
 panel-thickness=48
@@ -790,35 +869,49 @@ date-menu-box='END'
 system-menu-box='END'
 desktop-button-box='END'
 EOF
-  echo "   → Configuration saved to ~/dash-to-panel-config.dconf for manual application"
-fi
+    log_info "Configuration saved to ~/dash-to-panel-config.dconf for manual application"
+  fi
+}
 
-echo "→ 10. Configuring Plank to autostart…"
-mkdir -p ~/.config/autostart
-cat << EOF > ~/.config/autostart/plank.desktop
+configure_system_font() {
+  # Font is already configured in apply_theme_settings
+  log_debug "System font configuration completed in theme settings"
+}
+
+setup_plank() {
+  log_debug "Configuring Plank to autostart…"
+  mkdir -p ~/.config/autostart
+  cat << EOF > ~/.config/autostart/plank.desktop
 [Desktop Entry]
 Type=Application
 Name=Plank
 Exec=plank
 X-GNOME-Autostart-enabled=true
 EOF
+}
 
-echo "✅ Installation complete!"
-echo ""
-echo "🎨 Theme and icons applied successfully"
-echo "📂 Plank dock configured to autostart"
-echo ""
-
-# Check final status and provide guidance
-if extension_enabled 2>/dev/null; then
-  echo "✅ Dash-to-Panel extension is enabled and configured"
-  echo "🎉 Your Windows-style Ubuntu desktop is ready—no logout required!"
-else
-  echo "⚠️  Manual steps needed:"
-  echo "   1. Press Alt+F2, type 'r', and press Enter to restart GNOME Shell"
-  echo "   2. Open 'Extensions' app and enable 'Dash to Panel'"
-  echo "   3. If configuration is needed, run:"
-  echo "      dconf load /org/gnome/shell/extensions/dash-to-panel/ < ~/dash-to-panel-config.dconf"
+display_completion_message() {
   echo ""
-  echo "🔄 After completing these steps, your Windows-style desktop will be ready!"
+  log_info "🎨 Theme and icons applied successfully"
+  log_info "📂 Plank dock configured to autostart"
+  echo ""
+
+  # Check final status and provide guidance
+  if extension_enabled 2>/dev/null; then
+    log_info "✅ Dash-to-Panel extension is enabled and configured"
+    log_info "🎉 Your Windows-style Ubuntu desktop is ready—no logout required!"
+  else
+    log_warn "Manual steps needed:"
+    echo "   1. Press Alt+F2, type 'r', and press Enter to restart GNOME Shell"
+    echo "   2. Open 'Extensions' app and enable 'Dash to Panel'"
+    echo "   3. If configuration is needed, run:"
+    echo "      dconf load /org/gnome/shell/extensions/dash-to-panel/ < ~/dash-to-panel-config.dconf"
+    echo ""
+    log_info "🔄 After completing these steps, your Windows-style desktop will be ready!"
+  fi
+}
+
+# Only run main if script is executed directly (not sourced)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
 fi

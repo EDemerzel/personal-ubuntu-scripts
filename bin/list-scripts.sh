@@ -39,7 +39,7 @@ render_line() {
     # Strip leading markdown heading markers like '# ' if present
     summary=${summary###}
     summary=${summary##\#}
-    summary=$(echo "$summary" | sed 's/^\s\+//')
+    summary=${summary#"${summary%%[![:space:]]*}"}  # Remove leading whitespace
   elif compgen -G "$path/*.sh" >/dev/null; then
     summary="Shell scripts"
   fi
@@ -62,10 +62,6 @@ for d in "${DIRS[@]}"; do
     SECTION+="$(render_line "$d")\n"
   fi
 done
-
-# Escape slashes for sed safety
-START_RE=$(printf '%s\n' "$START_MARK" | sed 's/[^^]/[&]/g; s/\^/\\^/g')
-END_RE=$(printf '%s\n' "$END_MARK" | sed 's/[^^]/[&]/g; s/\^/\\^/g')
 
 # Replace the content between markers
 awk -v start="$START_MARK" -v end="$END_MARK" -v section="$SECTION" '

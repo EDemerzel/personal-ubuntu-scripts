@@ -9,6 +9,7 @@ set -euo pipefail
 # Created: {{DATE}}
 
 # Script directory for relative paths
+# shellcheck disable=SC2034  # May be used by template consumers
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Color output helpers
