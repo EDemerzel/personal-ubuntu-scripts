@@ -49,7 +49,7 @@ readonly REQUIRED_COMMANDS=(
 
 # Logging functions
 log_debug() {
-  if [[ "$DEBUG" == "true" ]]; then
+  if [[ "${DEBUG}" == "true" ]]; then
     echo "🔍 DEBUG: $*" >&2
   fi
 }
@@ -69,8 +69,8 @@ log_error() {
 # Signal handling for cleanup
 cleanup_on_exit() {
   local exit_code=$?
-  if [[ $exit_code -ne 0 ]]; then
-    log_error "Script exited with error code $exit_code"
+  if [[ ${exit_code} -ne 0 ]]; then
+    log_error "Script exited with error code ${exit_code}"
     log_info "Consider checking the logs above for details"
   fi
 }
@@ -91,28 +91,28 @@ detect_ubuntu_version() {
     # shellcheck source=/etc/os-release
     source /etc/os-release
 
-    ubuntu_version="$NAME"
+    ubuntu_version="${NAME}"
     # shellcheck disable=SC2153  # VERSION_CODENAME and VERSION_ID are from sourced file
-    version_codename="$VERSION_CODENAME"
+    version_codename="${VERSION_CODENAME:-unknown}"
     # shellcheck disable=SC2153
-    version_id="$VERSION_ID"
+    version_id="${VERSION_ID}"
 
-    if [[ "$ubuntu_version" =~ Ubuntu ]]; then
-      export UBUNTU_VERSION="$version_id"
-      export UBUNTU_CODENAME="$version_codename"
-      log_info "Detected $ubuntu_version ($version_codename)"
-      log_debug "Ubuntu version: $version_id, codename: $version_codename"
+    if [[ "${ubuntu_version}" =~ Ubuntu ]]; then
+      export UBUNTU_VERSION="${version_id}"
+      export UBUNTU_CODENAME="${version_codename}"
+      log_info "Detected ${ubuntu_version} (${version_codename})"
+      log_debug "Ubuntu version: ${version_id}, codename: ${version_codename}"
 
         # Check minimum Ubuntu version requirement
-        if ! check_ubuntu_compatibility "$version_id"; then
+        if ! check_ubuntu_compatibility "${version_id}"; then
           log_error "This script requires Ubuntu 24.04 or later"
-          log_error "Current version: $version_id ($version_codename)"
+          log_error "Current version: ${version_id} (${version_codename})"
           return 1
         fi
 
       return 0
     else
-      log_warn "Not running on Ubuntu (detected: $ubuntu_version)"
+      log_warn "Not running on Ubuntu (detected: ${ubuntu_version})"
       log_warn "Package availability checks may be unreliable"
       export UBUNTU_VERSION="unknown"
       export UBUNTU_CODENAME="unknown"
@@ -131,28 +131,28 @@ check_ubuntu_compatibility() {
   local version="$1"
 
   # Handle unknown version
-  if [[ "$version" == "unknown" || -z "$version" ]]; then
+  if [[ "${version}" == "unknown" || -z "${version}" ]]; then
     log_warn "Cannot verify Ubuntu version compatibility"
     return 0  # Allow to proceed with warning
   fi
 
   # Extract major and minor version numbers
-  if [[ "$version" =~ ^([0-9]+)\.([0-9]+) ]]; then
+  if [[ "${version}" =~ ^([0-9]+)\.([0-9]+) ]]; then
     local major="${BASH_REMATCH[1]}"
     local minor="${BASH_REMATCH[2]}"
 
-    log_debug "Checking Ubuntu $major.$minor compatibility"
+    log_debug "Checking Ubuntu ${major}.${minor} compatibility"
 
     # Check if version is 24.04 or later
-    if [[ "$major" -gt 24 ]] || [[ "$major" -eq 24 && "$minor" -ge 4 ]]; then
-      log_debug "Ubuntu $version meets minimum requirement (24.04+)"
+    if [[ "${major}" -gt 24 ]] || [[ "${major}" -eq 24 && "${minor}" -ge 4 ]]; then
+      log_debug "Ubuntu ${version} meets minimum requirement (24.04+)"
       return 0
     else
-      log_debug "Ubuntu $version below minimum requirement (24.04+)"
+      log_debug "Ubuntu ${version} below minimum requirement (24.04+)"
       return 1
     fi
   else
-    log_warn "Cannot parse Ubuntu version format: $version"
+    log_warn "Cannot parse Ubuntu version format: ${version}"
     return 0  # Allow to proceed with warning
   fi
 }
@@ -161,25 +161,25 @@ verify_package_availability() {
   local package="$1"
   local ubuntu_version="${UBUNTU_VERSION:-unknown}"
 
-  log_debug "Verifying availability of package: $package"
+  log_debug "Verifying availability of package: ${package}"
 
   # Method 1: Check local package cache
-  if apt-cache show "$package" >/dev/null 2>&1; then
-    log_debug "Package $package found in local cache"
-    echo "$package"  # Return the original package name
+  if apt-cache show "${package}" >/dev/null 2>&1; then
+    log_debug "Package ${package} found in local cache"
+    echo "${package}"  # Return the original package name
     return 0
   fi
 
   # Method 2: Try apt search as fallback
   if apt search "^${package}$" 2>/dev/null | grep -q "^${package}/"; then
-    log_debug "Package $package found via apt search"
-    echo "$package"  # Return the original package name
+    log_debug "Package ${package} found via apt search"
+    echo "${package}"  # Return the original package name
     return 0
   fi
 
   # Method 3: Check if it's a virtual package or has alternatives
   local alternatives=()
-  case "$package" in
+  case "${package}" in
     "chrome-gnome-shell")
       alternatives=("gnome-browser-connector")
       log_debug "Checking alternatives for chrome-gnome-shell: ${alternatives[*]}"
@@ -192,20 +192,23 @@ verify_package_availability() {
       alternatives=("fonts-liberation" "fonts-liberation2")
       log_debug "Checking alternatives for ttf-mscorefonts-installer: ${alternatives[*]}"
       ;;
+    *)
+      # No known alternatives for this package
+      ;;
   esac
 
   # Check alternatives
   for alt in "${alternatives[@]}"; do
-    if apt-cache show "$alt" >/dev/null 2>&1; then
-      log_info "Alternative package found: $alt (for $package)"
-      echo "$alt"  # Return the alternative package name
+    if apt-cache show "${alt}" >/dev/null 2>&1; then
+      log_info "Alternative package found: ${alt} (for ${package})"
+      echo "${alt}"  # Return the alternative package name
       return 0
     fi
   done
 
-  log_warn "Package $package not available in repositories"
-  if [[ "$ubuntu_version" != "unknown" ]]; then
-    log_info "For Ubuntu $ubuntu_version ($UBUNTU_CODENAME), check: https://packages.ubuntu.com/search?keywords=$package"
+  log_warn "Package ${package} not available in repositories"
+  if [[ "${ubuntu_version}" != "unknown" ]]; then
+    log_info "For Ubuntu ${ubuntu_version} (${UBUNTU_CODENAME}), check: https://packages.ubuntu.com/search?keywords=${package}"
   fi
 
   return 1
@@ -216,27 +219,27 @@ get_package_for_ubuntu_version() {
   local ubuntu_version="${UBUNTU_VERSION:-unknown}"
 
   # Handle packages that have different names across Ubuntu versions
-  case "$package" in
+  case "${package}" in
     "chrome-gnome-shell")
       # chrome-gnome-shell was replaced by gnome-browser-connector in Ubuntu 22.04+
-      if [[ "$ubuntu_version" =~ ^(22|23|24|25)\. ]]; then
+      if [[ "${ubuntu_version}" =~ ^(22|23|24|25)\. ]]; then
         if verify_package_availability "gnome-browser-connector" >/dev/null; then
           echo "gnome-browser-connector"
           return 0
         fi
       fi
-      echo "$package"
+      echo "${package}"
       ;;
     "gnome-shell-extension-manager")
       # Check if available, otherwise suggest gnome-tweaks
-      if verify_package_availability "$package" >/dev/null; then
-        echo "$package"
+      if verify_package_availability "${package}" >/dev/null; then
+        echo "${package}"
       else
         echo ""  # Will be handled as unavailable
       fi
       ;;
     *)
-      echo "$package"
+      echo "${package}"
       ;;
   esac
 
@@ -248,11 +251,11 @@ check_required_commands() {
   local missing_commands=()
 
   for cmd in "${REQUIRED_COMMANDS[@]}"; do
-    if ! command -v "$cmd" >/dev/null 2>&1; then
-      missing_commands+=("$cmd")
-      log_warn "Missing command: $cmd"
+    if ! command -v "${cmd}" >/dev/null 2>&1; then
+      missing_commands+=("${cmd}")
+      log_warn "Missing command: ${cmd}"
     else
-      log_debug "Found command: $cmd"
+      log_debug "Found command: ${cmd}"
     fi
   done
 
@@ -286,32 +289,32 @@ check_required_packages() {
   for package in "${REQUIRED_PACKAGES[@]}"; do
     # Get the appropriate package name for this Ubuntu version
     local target_package
-    target_package=$(get_package_for_ubuntu_version "$package")
+    target_package=$(get_package_for_ubuntu_version "${package}")
 
-    if [[ -z "$target_package" ]]; then
-      log_debug "No suitable package found for $package"
-      unavailable_packages+=("$package")
+    if [[ -z "${target_package}" ]]; then
+      log_debug "No suitable package found for ${package}"
+      unavailable_packages+=("${package}")
       continue
     fi
 
-    if dpkg -l "$target_package" >/dev/null 2>&1; then
-      log_debug "Package installed: $target_package"
+    if dpkg -l "${target_package}" >/dev/null 2>&1; then
+      log_debug "Package installed: ${target_package}"
     else
-      log_debug "Package not installed: $target_package"
+      log_debug "Package not installed: ${target_package}"
 
       # Verify package availability and get alternatives if needed
-      if alternative=$(verify_package_availability "$target_package"); then
-        if [[ "$alternative" != "$target_package" ]]; then
+      if alternative=$(verify_package_availability "${target_package}"); then
+        if [[ "${alternative}" != "${target_package}" ]]; then
           # Alternative package found
-          log_info "Using alternative package: $alternative (instead of $target_package)"
-          package_substitutions+=("$alternative")
+          log_info "Using alternative package: ${alternative} (instead of ${target_package})"
+          package_substitutions+=("${alternative}")
         else
           # Original package is available
-          missing_packages+=("$target_package")
+          missing_packages+=("${target_package}")
         fi
       else
         # Package not available in repositories
-        unavailable_packages+=("$target_package")
+        unavailable_packages+=("${target_package}")
       fi
     fi
   done
@@ -320,19 +323,19 @@ check_required_packages() {
   if [[ ${#unavailable_packages[@]} -gt 0 ]]; then
     log_warn "The following packages are not available in repositories:"
     for pkg in "${unavailable_packages[@]}"; do
-      case "$pkg" in
+      case "${pkg}" in
         "chrome-gnome-shell")
-          log_warn "  - $pkg: Try installing 'gnome-browser-connector' instead"
+          log_warn "  - ${pkg}: Try installing 'gnome-browser-connector' instead"
           log_info "    Note: chrome-gnome-shell was replaced by gnome-browser-connector in newer Ubuntu versions"
           ;;
         "gnome-shell-extension-manager")
-          log_warn "  - $pkg: You can install GNOME extensions manually or use gnome-tweaks"
+          log_warn "  - ${pkg}: You can install GNOME extensions manually or use gnome-tweaks"
           ;;
         "ttf-mscorefonts-installer")
-          log_warn "  - $pkg: Consider installing 'fonts-liberation' or 'fonts-liberation2' for similar fonts"
+          log_warn "  - ${pkg}: Consider installing 'fonts-liberation' or 'fonts-liberation2' for similar fonts"
           ;;
         *)
-          log_warn "  - $pkg: Package not found in repositories"
+          log_warn "  - ${pkg}: Package not found in repositories"
           ;;
       esac
     done
@@ -340,7 +343,7 @@ check_required_packages() {
     log_info "You can continue without these packages, but some features may not work optimally."
     read -rp "Continue anyway? (y/N): " -n 1 continue_anyway
     echo
-    if [[ ! "$continue_anyway" =~ ^[Yy]$ ]]; then
+    if [[ ! "${continue_anyway}" =~ ^[Yy]$ ]]; then
       log_error "Installation cancelled by user."
       return 1
     fi
@@ -355,7 +358,7 @@ check_required_packages() {
     # Ask for confirmation
     read -rp "Install missing packages? (y/N): " -n 1 install_packages
     echo
-    if [[ ! "$install_packages" =~ ^[Yy]$ ]]; then
+    if [[ ! "${install_packages}" =~ ^[Yy]$ ]]; then
       log_error "Cannot proceed without required packages."
       return 1
     fi
@@ -370,7 +373,7 @@ check_required_packages() {
 
       read -rp "Continue with installation anyway? (y/N): " -n 1 continue_anyway
       echo
-      if [[ ! "$continue_anyway" =~ ^[Yy]$ ]]; then
+      if [[ ! "${continue_anyway}" =~ ^[Yy]$ ]]; then
         return 1
       fi
     fi
@@ -397,7 +400,7 @@ detect_gnome_environment() {
   # Method 2: Check XDG_CURRENT_DESKTOP (multiple possible values)
   case "${XDG_CURRENT_DESKTOP:-}" in
     *GNOME*|*Unity*|*ubuntu*)
-      log_debug "GNOME-based desktop detected via XDG_CURRENT_DESKTOP: $XDG_CURRENT_DESKTOP"
+      log_debug "GNOME-based desktop detected via XDG_CURRENT_DESKTOP: ${XDG_CURRENT_DESKTOP}"
       return 0
       ;;
   esac
@@ -405,7 +408,7 @@ detect_gnome_environment() {
   # Method 3: Check DESKTOP_SESSION
   case "${DESKTOP_SESSION:-}" in
     gnome*|ubuntu*|unity*)
-      log_debug "GNOME-based session detected via DESKTOP_SESSION: $DESKTOP_SESSION"
+      log_debug "GNOME-based session detected via DESKTOP_SESSION: ${DESKTOP_SESSION}"
       return 0
       ;;
   esac
@@ -436,76 +439,76 @@ detect_gnome_version() {
     return 1
   fi
 
-  log_debug "Raw version output: '$version_output'"
+  log_debug "Raw version output: '${version_output}'"
 
   # Parse version with multiple fallback methods
   local version=""
   local major_version=""
 
   # Method 1: Standard "GNOME Shell X.Y.Z" format
-  if [[ "$version_output" =~ GNOME\ Shell\ ([0-9]+)\.([0-9]+)([\.0-9]*) ]]; then
+  if [[ "${version_output}" =~ GNOME\ Shell\ ([0-9]+)\.([0-9]+)([\.0-9]*) ]]; then
     version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}${BASH_REMATCH[3]}"
     major_version="${BASH_REMATCH[1]}"
-    log_debug "Parsed version using method 1: $version (major: $major_version)"
+    log_debug "Parsed version using method 1: ${version} (major: ${major_version})"
 
   # Method 2: Just numbers after "GNOME Shell"
-  elif [[ "$version_output" =~ GNOME\ Shell\ ([0-9]+) ]]; then
+  elif [[ "${version_output}" =~ GNOME\ Shell\ ([0-9]+) ]]; then
     major_version="${BASH_REMATCH[1]}"
-    version="$major_version"
-    log_debug "Parsed version using method 2: $version (major: $major_version)"
+    version="${major_version}"
+    log_debug "Parsed version using method 2: ${version} (major: ${major_version})"
 
   # Method 3: Extract any version-like pattern
-  elif [[ "$version_output" =~ ([0-9]+)\.([0-9]+) ]]; then
+  elif [[ "${version_output}" =~ ([0-9]+)\.([0-9]+) ]]; then
     version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
     major_version="${BASH_REMATCH[1]}"
-    log_debug "Parsed version using method 3: $version (major: $major_version)"
+    log_debug "Parsed version using method 3: ${version} (major: ${major_version})"
 
   # Method 4: Extract just the first number
-  elif [[ "$version_output" =~ ([0-9]+) ]]; then
+  elif [[ "${version_output}" =~ ([0-9]+) ]]; then
     major_version="${BASH_REMATCH[1]}"
-    version="$major_version"
-    log_debug "Parsed version using method 4: $version (major: $major_version)"
+    version="${major_version}"
+    log_debug "Parsed version using method 4: ${version} (major: ${major_version})"
   else
-    log_error "Could not parse GNOME Shell version from: '$version_output'"
+    log_error "Could not parse GNOME Shell version from: '${version_output}'"
     return 1
   fi
 
   # Validate major version is numeric and in reasonable range
-  if ! [[ "$major_version" =~ ^[0-9]+$ ]] || [[ "$major_version" -lt 40 ]] || [[ "$major_version" -gt 60 ]]; then
-    log_error "Invalid GNOME Shell major version: '$major_version'"
+  if ! [[ "${major_version}" =~ ^[0-9]+$ ]] || [[ "${major_version}" -lt 40 ]] || [[ "${major_version}" -gt 60 ]]; then
+    log_error "Invalid GNOME Shell major version: '${major_version}'"
     return 1
   fi
 
   # Check if version is supported
-  if [[ "$major_version" -lt 45 ]]; then
-    log_warn "GNOME Shell $major_version is below minimum supported version (45)"
+  if [[ "${major_version}" -lt 45 ]]; then
+    log_warn "GNOME Shell ${major_version} is below minimum supported version (45)"
     log_warn "The script may not work correctly with older GNOME versions"
-  elif [[ "$major_version" -gt 49 ]]; then
-    log_info "GNOME Shell $major_version is newer than tested versions"
+  elif [[ "${major_version}" -gt 49 ]]; then
+    log_info "GNOME Shell ${major_version} is newer than tested versions"
     log_info "Using latest available Dash-to-Panel version"
   fi
 
   # Export for use by other functions
-  export GNOME_VER="$version"
-  export GNOME_MAJOR="$major_version"
+  export GNOME_VER="${version}"
+  export GNOME_MAJOR="${major_version}"
 
-  log_info "Detected GNOME Shell $version (major version: $major_version)"
+  log_info "Detected GNOME Shell ${version} (major version: ${major_version})"
   return 0
 }
 
 get_dash_to_panel_version() {
   local gnome_major="${GNOME_MAJOR:-}"
 
-  if [[ -z "$gnome_major" ]]; then
+  if [[ -z "${gnome_major}" ]]; then
     log_error "GNOME major version not detected. Run detect_gnome_version first."
     return 1
   fi
 
-  log_debug "Getting Dash-to-Panel version for GNOME $gnome_major"
+  log_debug "Getting Dash-to-Panel version for GNOME ${gnome_major}"
 
   # Version mapping based on GNOME Shell version
   # Updated to latest maintenance releases as of January 2025
-  case "$gnome_major" in
+  case "${gnome_major}" in
     45)
       echo "v60"
       log_debug "GNOME 45 -> Dash-to-Panel v60"
@@ -525,10 +528,10 @@ get_dash_to_panel_version() {
     49|5[0-9]|6[0-9])
       # GNOME 49+ uses latest available version
       echo "v70"
-      log_debug "GNOME $gnome_major -> Dash-to-Panel v70 (latest)"
+      log_debug "GNOME ${gnome_major} -> Dash-to-Panel v70 (latest)"
       ;;
     *)
-      log_error "Unsupported GNOME version: $gnome_major"
+      log_error "Unsupported GNOME version: ${gnome_major}"
       log_error "Supported versions: 45, 46, 47, 48, 49+"
       return 1
       ;;
@@ -572,7 +575,7 @@ check_prerequisites() {
     log_warn "GNOME desktop not detected. This script is designed for GNOME."
     read -rp "Continue anyway? (y/N): " -n 1 continue_anyway
     echo
-    if [[ ! "$continue_anyway" =~ ^[Yy]$ ]]; then
+    if [[ ! "${continue_anyway}" =~ ^[Yy]$ ]]; then
       log_info "Aborted by user."
         return 1
     fi
@@ -611,7 +614,7 @@ main() {
     fi
 
   log_info "→ 1. Backing up current GNOME settings…"
-  dconf dump / > "$HOME/gnome-settings-backup-$(date +%F).dconf" \
+  dconf dump / > "${HOME}/gnome-settings-backup-$(date +%F).dconf" \
     || log_warn "Backup failed—continuing anyway."
 
   log_info "→ 2. Cleaning up previous artifacts…"
@@ -703,21 +706,21 @@ install_dash_to_panel() {
     return 1
   fi
 
-  log_info "Installing Dash-to-Panel $TAG for GNOME Shell $GNOME_VER"
+  log_info "Installing Dash-to-Panel ${TAG} for GNOME Shell ${GNOME_VER}"
 
   git clone https://github.com/home-sweet-gnome/dash-to-panel.git ~/dash-to-panel-src
   cd ~/dash-to-panel-src
 
-  if [[ -n "$TAG" ]]; then
-    log_debug "Checking out Dash-to-Panel tag $TAG…"
+  if [[ -n "${TAG}" ]]; then
+    log_debug "Checking out Dash-to-Panel tag ${TAG}…"
     git fetch --tags
-    if git checkout "$TAG"; then
-      log_debug "Using tag $TAG"
+    if git checkout "${TAG}"; then
+      log_debug "Using tag ${TAG}"
     else
-      log_warn "Tag $TAG not found; using default branch."
+      log_warn "Tag ${TAG} not found; using default branch."
     fi
   else
-    log_debug "Using latest version for GNOME $GNOME_MAJOR."
+    log_debug "Using latest version for GNOME ${GNOME_MAJOR}."
   fi
 
   log_debug "Running 'make install'…"
@@ -727,7 +730,7 @@ install_dash_to_panel() {
 
 enable_dash_to_panel() {
   # Wait for GNOME Shell to detect the newly installed extension
-  sleep "$EXTENSION_WAIT_TIME"
+  sleep "${EXTENSION_WAIT_TIME}"
 
   # Try multiple approaches to enable the extension
   if extension_exists; then
@@ -742,7 +745,7 @@ enable_dash_to_panel() {
         --object-path /org/gnome/Shell \
         --method org.gnome.Shell.Eval \
         "Main.extensionManager.reloadExtensions()" 2>/dev/null || true
-      sleep "$RETRY_WAIT_TIME"
+      sleep "${RETRY_WAIT_TIME}"
       gnome-extensions enable dash-to-panel@jderose9.github.com || \
         log_warn "Extension enable failed. You may need to enable it manually after a GNOME Shell restart."
     fi
@@ -754,7 +757,7 @@ enable_dash_to_panel() {
       --object-path /org/gnome/Shell \
       --method org.gnome.Shell.Eval \
       "Main.extensionManager.reloadExtensions()" 2>/dev/null || true
-    sleep "$EXTENSION_WAIT_TIME"
+    sleep "${EXTENSION_WAIT_TIME}"
 
     if extension_exists; then
       gnome-extensions enable dash-to-panel@jderose9.github.com || \
@@ -806,36 +809,36 @@ configure_dash_to_panel() {
   local SCHEMA="org.gnome.shell.extensions.dash-to-panel"
 
   # Check if the schema exists before trying to configure it
-  if gsettings list-schemas | grep -q "^$SCHEMA$"; then
+  if gsettings list-schemas | grep -q "^${SCHEMA}$"; then
     log_debug "Schema found, applying configuration..."
 
     # Position, size & anchor
-    gsettings set $SCHEMA panel-position  'BOTTOM'
-    gsettings set $SCHEMA panel-thickness 48        # px
-    gsettings set $SCHEMA panel-length    100       # % of screen
-    gsettings set $SCHEMA anchor          'CENTER'
+    gsettings set "${SCHEMA}" panel-position  'BOTTOM'
+    gsettings set "${SCHEMA}" panel-thickness 48        # px
+    gsettings set "${SCHEMA}" panel-length    100       # % of screen
+    gsettings set "${SCHEMA}" anchor          'CENTER'
 
     # Visibility
-    gsettings set $SCHEMA show-applications-button true
-    gsettings set $SCHEMA show-activities-button   true
-    gsettings set $SCHEMA show-left-box            true
-    gsettings set $SCHEMA show-taskbar             true
-    gsettings set $SCHEMA show-center-box          true
-    gsettings set $SCHEMA show-right-box           true
-    gsettings set $SCHEMA show-date-menu           true
-    gsettings set $SCHEMA show-system-menu         true
-    gsettings set $SCHEMA show-desktop-button      true
+    gsettings set "${SCHEMA}" show-applications-button true
+    gsettings set "${SCHEMA}" show-activities-button   true
+    gsettings set "${SCHEMA}" show-left-box            true
+    gsettings set "${SCHEMA}" show-taskbar             true
+    gsettings set "${SCHEMA}" show-center-box          true
+    gsettings set "${SCHEMA}" show-right-box           true
+    gsettings set "${SCHEMA}" show-date-menu           true
+    gsettings set "${SCHEMA}" show-system-menu         true
+    gsettings set "${SCHEMA}" show-desktop-button      true
 
     # Stacking: 'START' = left, 'END' = right
-    gsettings set $SCHEMA applications-button-box 'START'
-    gsettings set $SCHEMA activities-button-box     'START'
-    gsettings set $SCHEMA left-box-box              'START'
-    gsettings set $SCHEMA taskbar-box               'START'
-    gsettings set $SCHEMA center-box-box            'END'
-    gsettings set $SCHEMA right-box-box             'END'
-    gsettings set $SCHEMA date-menu-box             'END'
-    gsettings set $SCHEMA system-menu-box           'END'
-    gsettings set $SCHEMA desktop-button-box        'END'
+    gsettings set "${SCHEMA}" applications-button-box 'START'
+    gsettings set "${SCHEMA}" activities-button-box     'START'
+    gsettings set "${SCHEMA}" left-box-box              'START'
+    gsettings set "${SCHEMA}" taskbar-box               'START'
+    gsettings set "${SCHEMA}" center-box-box            'END'
+    gsettings set "${SCHEMA}" right-box-box             'END'
+    gsettings set "${SCHEMA}" date-menu-box             'END'
+    gsettings set "${SCHEMA}" system-menu-box           'END'
+    gsettings set "${SCHEMA}" desktop-button-box        'END'
 
     log_info "Dash-to-Panel configuration applied"
   else
