@@ -1,6 +1,6 @@
-# Business Ubuntu Scripts
+# Business Scripts
 
-A curated collection of internal, business-focused automation scripts for Ubuntu. Each script lives in its own folder with its own README. The goal is to keep things simple, repeatable, and safe to run across business environments.
+A curated collection of internal, business-focused automation scripts. Each script lives in its own folder with its own README. The goal is to keep things simple, repeatable, and safe to run across business environments.
 
 ## Language Support
 
@@ -92,8 +92,7 @@ Scripts are organized by purpose, not language, so you'll find the best tool for
 ## Current scripts
 
 <!-- scripts:start -->
-- `dotnet-full-clean/` — dotnet-full-clean
-
+- `dotnet-full-clean/` - dotnet-full-clean
 <!-- scripts:end -->
 
 ## Adding new scripts
@@ -135,7 +134,7 @@ This creates a new folder with:
 
 - New scripts should follow the same folder-per-script pattern and include a minimal `README.md` explaining purpose, prerequisites, and usage.
 - Keep scripts idempotent where practical and avoid destructive defaults.
-- Prefer standard Ubuntu repositories/tools where possible; clearly call out any third-party sources.
+- Prefer standard repositories/tools where possible; clearly call out any third-party sources.
 
 ## Usage and distribution
 

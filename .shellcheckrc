@@ -1,5 +1,5 @@
 # Shellcheck configuration file
-# This configures shellcheck behavior for the personal-ubuntu-scripts repository
+# This configures shellcheck behavior for the repository
 
 # Disable checking of external sources we can't control
 disable=SC1091
