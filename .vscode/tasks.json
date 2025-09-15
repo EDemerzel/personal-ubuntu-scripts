@@ -81,6 +81,112 @@
         "focus": false,
         "panel": "shared"
       }
+    },
+    {
+      "label": "PowerShell Script Analysis All",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        "Get-ChildItem -Path . -Filter '*.ps1' -Recurse | ForEach-Object { Write-Host \"Analyzing: $($_.FullName)\"; Invoke-ScriptAnalyzer -Path $_.FullName -Settings '.vscode/PSScriptAnalyzerSettings.psd1' }"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": {
+        "owner": "powershell",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s+(\\w+):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      }
+    },
+    {
+      "label": "PowerShell Script Analysis Current",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        "Invoke-ScriptAnalyzer -Path '${file}' -Settings '.vscode/PSScriptAnalyzerSettings.psd1'"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": {
+        "owner": "powershell",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s+(\\w+):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      }
+    },
+    {
+      "label": "PowerShell Syntax Check",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        "try { $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content '${file}' -Raw), [ref]$null); Write-Host 'Syntax OK' } catch { Write-Error $_.Exception.Message }"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Validate All Scripts (Bash + PowerShell)",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "Shellcheck All Scripts",
+        "PowerShell Script Analysis All"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
     }
   ]
 }

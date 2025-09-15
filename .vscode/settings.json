@@ -17,7 +17,10 @@
     "SUPPORT": "markdown",
     ".shellcheckrc": "ini",
     ".markdownlintignore": "plaintext",
-    "*.sh": "shellscript"
+    "*.sh": "shellscript",
+    "*.ps1": "powershell",
+    "*.psm1": "powershell",
+    "*.psd1": "powershell"
   },
   "markdownlint.ignore": [
     ".shellcheckrc",
@@ -37,6 +40,19 @@
     "**/.git/**": true,
     "**/node_modules/**": true
   },
+  "powershell.codeFormatting.newLineAfterCloseBrace": true,
+  "powershell.codeFormatting.newLineAfterOpenBrace": true,
+  "powershell.codeFormatting.preset": "OTBS",
+  "powershell.codeFormatting.trimWhitespaceAroundPipe": true,
+  "powershell.codeFormatting.useConstantStrings": true,
+  "powershell.codeFormatting.useCorrectCasing": true,
+  "powershell.codeFormatting.whitespaceAfterSeparator": true,
+  "powershell.codeFormatting.whitespaceAroundOperator": true,
+  "powershell.codeFormatting.whitespaceBeforeOpenBrace": true,
+  "powershell.codeFormatting.whitespaceBeforeOpenParen": true,
+  "powershell.integratedConsole.showOnStartup": false,
+  "powershell.scriptAnalysis.enable": true,
+  "powershell.scriptAnalysis.settingsPath": ".vscode/PSScriptAnalyzerSettings.psd1",
   "files.eol": "\n",
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,

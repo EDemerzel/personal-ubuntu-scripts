@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Update the "Current scripts" section in the root README.md by listing all
-# first-level directories that contain at least one .sh file (or a README.md),
+# first-level directories that contain at least one .sh or .ps1 file (or a README.md),
 # excluding common non-script folders.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
@@ -40,8 +40,19 @@ render_line() {
     summary=${summary###}
     summary=${summary##\#}
     summary=${summary#"${summary%%[![:space:]]*}"}  # Remove leading whitespace
-  elif compgen -G "$path/*.sh" >/dev/null; then
-    summary="Shell scripts"
+  elif compgen -G "$path/*.sh" >/dev/null || compgen -G "$path/*.ps1" >/dev/null; then
+    # Detect script type and provide appropriate summary
+    local has_bash has_powershell
+    has_bash=$(compgen -G "$path/*.sh" >/dev/null && echo "true" || echo "false")
+    has_powershell=$(compgen -G "$path/*.ps1" >/dev/null && echo "true" || echo "false")
+
+    if [[ "$has_bash" == "true" && "$has_powershell" == "true" ]]; then
+      summary="Bash and PowerShell scripts"
+    elif [[ "$has_powershell" == "true" ]]; then
+      summary="PowerShell scripts"
+    else
+      summary="Shell scripts"
+    fi
   fi
 
   if [[ -n "$summary" ]]; then
@@ -58,7 +69,7 @@ for d in "${DIRS[@]}"; do
     continue
   fi
   # Only include folders that look like script folders
-  if compgen -G "$ROOT_DIR/$d/*.sh" >/dev/null || [[ -f "$ROOT_DIR/$d/README.md" ]]; then
+  if compgen -G "$ROOT_DIR/$d/*.sh" >/dev/null || compgen -G "$ROOT_DIR/$d/*.ps1" >/dev/null || [[ -f "$ROOT_DIR/$d/README.md" ]]; then
     SECTION+="$(render_line "$d")\n"
   fi
 done

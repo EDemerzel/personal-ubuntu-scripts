@@ -2,6 +2,7 @@
   "recommendations": [
     "timonwong.shellcheck",
     "mads-hartmann.bash-ide-vscode",
+    "ms-vscode.powershell",
     "EditorConfig.EditorConfig",
     "DavidAnson.vscode-markdownlint"
   ]

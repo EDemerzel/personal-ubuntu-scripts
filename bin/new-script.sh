@@ -3,12 +3,14 @@ set -euo pipefail
 
 # new-script.sh - Create a new script folder from template
 #
-# Usage: ./bin/new-script.sh <script-name> [description]
+# Usage: ./bin/new-script.sh [--powershell] <script-name> [description]
 #
 # Creates a new script directory with boilerplate files from the template.
+# Supports both Bash and PowerShell script creation.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
-TEMPLATE_DIR="$ROOT_DIR/templates/script-template"
+BASH_TEMPLATE_DIR="$ROOT_DIR/templates/script-template"
+POWERSHELL_TEMPLATE_DIR="$ROOT_DIR/templates/powershell-template"
 
 # Color output helpers
 RED='\033[0;31m'
@@ -55,9 +57,12 @@ warn() {
 
 usage() {
   cat << EOF
-Usage: $0 <script-name> [description]
+Usage: $0 [--powershell] <script-name> [description]
 
 Creates a new script directory with boilerplate files.
+
+Options:
+  --powershell  Create a PowerShell script instead of a Bash script
 
 Arguments:
   script-name   Name of the script (will be used for directory and main script file)
@@ -66,12 +71,13 @@ Arguments:
 Examples:
   $0 backup-dotfiles "Backup user dotfiles to cloud storage"
   $0 setup-dev-env "Configure development environment"
+  $0 --powershell get-system-info "Get detailed system information"
 
 The script will:
 1. Create a new directory named <script-name>
-2. Copy template files (README.md, LICENSE, script.sh)
+2. Copy template files (README.md, LICENSE, script file)
 3. Replace placeholders with actual values
-4. Make the script executable
+4. Make the script executable (Bash) or set appropriate metadata (PowerShell)
 5. Update the root README.md scripts list
 EOF
 }
@@ -96,7 +102,7 @@ get_author() {
 
 # Replace placeholders in a file
 replace_placeholders() {
-  local file="$1" script_name="$2" description="$3" author="$4" year="$5" date="$6"
+  local file="$1" script_name="$2" description="$3" author="$4" year="$5" date="$6" extension="$7"
 
   sed -i \
     -e "s/{{SCRIPT_NAME}}/$script_name/g" \
@@ -104,20 +110,58 @@ replace_placeholders() {
     -e "s/{{AUTHOR}}/$author/g" \
     -e "s/{{YEAR}}/$year/g" \
     -e "s/{{DATE}}/$date/g" \
+    -e "s/{{EXTENSION}}/$extension/g" \
     "$file"
 }
 
 main() {
   # Parse arguments
-  if [[ $# -lt 1 ]]; then
+  local use_powershell=false
+  local script_name=""
+  local description=""
+
+  # Parse options
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --powershell)
+        use_powershell=true
+        shift
+        ;;
+      --help|-h)
+        usage
+        exit 0
+        ;;
+      -*)
+        error "Unknown option: $1"
+        ;;
+      *)
+        if [[ -z "$script_name" ]]; then
+          script_name="$1"
+        elif [[ -z "$description" ]]; then
+          description="$1"
+        else
+          error "Too many arguments"
+        fi
+        shift
+        ;;
+    esac
+  done
+
+  # Set default description
+  if [[ -z "$description" ]]; then
+    if [[ "$use_powershell" == "true" ]]; then
+      description="A useful PowerShell script"
+    else
+      description="A useful Ubuntu script"
+    fi
+  fi
+
+  # Validate inputs
+  if [[ -z "$script_name" ]]; then
     usage
     exit 1
   fi
 
-  local script_name="$1"
-  local description="${2:-A useful Ubuntu script}"
-
-  # Validate inputs
   validate_name "$script_name"
 
   # Check if directory already exists
@@ -126,9 +170,23 @@ main() {
     error "Directory '$script_name' already exists"
   fi
 
+  # Select template directory
+  local template_dir
+  local script_extension
+  local script_type
+  if [[ "$use_powershell" == "true" ]]; then
+    template_dir="$POWERSHELL_TEMPLATE_DIR"
+    script_extension="ps1"
+    script_type="PowerShell"
+  else
+    template_dir="$BASH_TEMPLATE_DIR"
+    script_extension="sh"
+    script_type="Bash"
+  fi
+
   # Check if template exists
-  if [[ ! -d "$TEMPLATE_DIR" ]]; then
-    error "Template directory not found: $TEMPLATE_DIR"
+  if [[ ! -d "$template_dir" ]]; then
+    error "Template directory not found: $template_dir"
   fi
 
   # Get metadata
@@ -137,7 +195,7 @@ main() {
   year=$(date +%Y)
   date=$(date +"%Y-%m-%d")
 
-  info "Creating new script: $script_name"
+  info "Creating new $script_type script: $script_name"
   info "Description: $description"
   info "Author: $author"
 
@@ -145,26 +203,36 @@ main() {
   mkdir -p "$target_dir"
 
   # Copy template files
-  cp -r "$TEMPLATE_DIR"/* "$target_dir/"
+  cp -r "$template_dir"/* "$target_dir/"
 
-  # Rename script.sh to match script name
-  mv "$target_dir/script.sh" "$target_dir/$script_name.sh"
+  # Rename script file to match script name and extension
+  if [[ "$use_powershell" == "true" ]]; then
+    mv "$target_dir/script.ps1" "$target_dir/$script_name.ps1"
+  else
+    mv "$target_dir/script.sh" "$target_dir/$script_name.sh"
+  fi
 
   # Replace placeholders in all files
   for file in "$target_dir"/*; do
     if [[ -f "$file" ]]; then
-      replace_placeholders "$file" "$script_name" "$description" "$author" "$year" "$date"
+      replace_placeholders "$file" "$script_name" "$description" "$author" "$year" "$date" "$script_extension"
     fi
   done
 
-  # Make script executable
-  chmod +x "$target_dir/$script_name.sh"
+  # Make script executable (Bash only)
+  if [[ "$use_powershell" == "false" ]]; then
+    chmod +x "$target_dir/$script_name.sh"
+  fi
 
   info "Created script directory: $script_name/"
   info "Files created:"
   info "  - $script_name/README.md"
   info "  - $script_name/LICENSE"
-  info "  - $script_name/$script_name.sh (executable)"
+  if [[ "$use_powershell" == "true" ]]; then
+    info "  - $script_name/$script_name.ps1"
+  else
+    info "  - $script_name/$script_name.sh (executable)"
+  fi
 
   # Update root README
   if [[ -x "$ROOT_DIR/bin/list-scripts.sh" ]]; then
@@ -175,10 +243,10 @@ main() {
     warn "Run './bin/list-scripts.sh' manually to update the scripts list"
   fi
 
-  info "Script creation completed successfully!"
+  info "$script_type script creation completed successfully!"
   info "Next steps:"
   info "  1. Edit $script_name/README.md with specific details"
-  info "  2. Implement your logic in $script_name/$script_name.sh"
+  info "  2. Implement your logic in $script_name/$script_name.$script_extension"
   info "  3. Test the script thoroughly"
 }
 
