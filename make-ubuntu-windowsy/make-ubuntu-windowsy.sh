@@ -79,6 +79,129 @@ cleanup_on_exit() {
 trap cleanup_on_exit EXIT
 
 # Package verification functions
+detect_ubuntu_version() {
+  log_debug "Detecting Ubuntu version..."
+
+  if [[ -f /etc/os-release ]]; then
+    # Extract Ubuntu version information
+    local ubuntu_version
+    local version_codename
+    local version_id
+
+    # Source the os-release file to get version info
+    source /etc/os-release
+
+    ubuntu_version="$NAME"
+    version_codename="$VERSION_CODENAME"
+    version_id="$VERSION_ID"
+
+    if [[ "$ubuntu_version" =~ Ubuntu ]]; then
+      export UBUNTU_VERSION="$version_id"
+      export UBUNTU_CODENAME="$version_codename"
+      log_info "Detected $ubuntu_version ($version_codename)"
+      log_debug "Ubuntu version: $version_id, codename: $version_codename"
+      return 0
+    else
+      log_warn "Not running on Ubuntu (detected: $ubuntu_version)"
+      log_warn "Package availability checks may be unreliable"
+      export UBUNTU_VERSION="unknown"
+      export UBUNTU_CODENAME="unknown"
+      return 1
+    fi
+  else
+    log_error "Cannot detect Ubuntu version (/etc/os-release not found)"
+    export UBUNTU_VERSION="unknown"
+    export UBUNTU_CODENAME="unknown"
+    return 1
+  fi
+}
+
+verify_package_availability() {
+  local package="$1"
+  local ubuntu_version="${UBUNTU_VERSION:-unknown}"
+
+  log_debug "Verifying availability of package: $package"
+
+  # Method 1: Check local package cache
+  if apt-cache show "$package" >/dev/null 2>&1; then
+    log_debug "Package $package found in local cache"
+    echo "$package"  # Return the original package name
+    return 0
+  fi
+
+  # Method 2: Try apt search as fallback
+  if apt search "^${package}$" 2>/dev/null | grep -q "^${package}/"; then
+    log_debug "Package $package found via apt search"
+    echo "$package"  # Return the original package name
+    return 0
+  fi
+
+  # Method 3: Check if it's a virtual package or has alternatives
+  local alternatives=()
+  case "$package" in
+    "chrome-gnome-shell")
+      alternatives=("gnome-browser-connector")
+      log_debug "Checking alternatives for chrome-gnome-shell: ${alternatives[*]}"
+      ;;
+    "gnome-shell-extension-manager")
+      alternatives=("gnome-shell-extensions")
+      log_debug "Checking alternatives for gnome-shell-extension-manager: ${alternatives[*]}"
+      ;;
+    "ttf-mscorefonts-installer")
+      alternatives=("fonts-liberation" "fonts-liberation2")
+      log_debug "Checking alternatives for ttf-mscorefonts-installer: ${alternatives[*]}"
+      ;;
+  esac
+
+  # Check alternatives
+  for alt in "${alternatives[@]}"; do
+    if apt-cache show "$alt" >/dev/null 2>&1; then
+      log_info "Alternative package found: $alt (for $package)"
+      echo "$alt"  # Return the alternative package name
+      return 0
+    fi
+  done
+
+  log_warn "Package $package not available in repositories"
+  if [[ "$ubuntu_version" != "unknown" ]]; then
+    log_info "For Ubuntu $ubuntu_version ($UBUNTU_CODENAME), check: https://packages.ubuntu.com/search?keywords=$package"
+  fi
+
+  return 1
+}
+
+get_package_for_ubuntu_version() {
+  local package="$1"
+  local ubuntu_version="${UBUNTU_VERSION:-unknown}"
+
+  # Handle packages that have different names across Ubuntu versions
+  case "$package" in
+    "chrome-gnome-shell")
+      # chrome-gnome-shell was replaced by gnome-browser-connector in Ubuntu 22.04+
+      if [[ "$ubuntu_version" =~ ^(22|23|24|25)\. ]]; then
+        if verify_package_availability "gnome-browser-connector" >/dev/null; then
+          echo "gnome-browser-connector"
+          return 0
+        fi
+      fi
+      echo "$package"
+      ;;
+    "gnome-shell-extension-manager")
+      # Check if available, otherwise suggest gnome-tweaks
+      if verify_package_availability "$package" >/dev/null; then
+        echo "$package"
+      else
+        echo ""  # Will be handled as unavailable
+      fi
+      ;;
+    *)
+      echo "$package"
+      ;;
+  esac
+
+  return 0
+}
+
 check_required_commands() {
   log_info "Checking required commands..."
   local missing_commands=()
@@ -105,7 +228,13 @@ check_required_commands() {
 
 check_required_packages() {
   log_info "Checking for required packages..."
+
+  # Detect Ubuntu version for better package availability checking
+  detect_ubuntu_version
+
   local missing_packages=()
+  local unavailable_packages=()
+  local package_substitutions=()
 
   # Update package cache first
   log_info "Updating package cache..."
@@ -114,20 +243,73 @@ check_required_packages() {
   fi
 
   for package in "${REQUIRED_PACKAGES[@]}"; do
-    if ! dpkg -l "$package" >/dev/null 2>&1; then
-      if apt-cache show "$package" >/dev/null 2>&1; then
-        missing_packages+=("$package")
-        log_debug "Package not installed: $package"
-      else
-        log_warn "Package not available in repositories: $package"
-      fi
+    # Get the appropriate package name for this Ubuntu version
+    local target_package
+    target_package=$(get_package_for_ubuntu_version "$package")
+
+    if [[ -z "$target_package" ]]; then
+      log_debug "No suitable package found for $package"
+      unavailable_packages+=("$package")
+      continue
+    fi
+
+    if dpkg -l "$target_package" >/dev/null 2>&1; then
+      log_debug "Package installed: $target_package"
     else
-      log_debug "Package installed: $package"
+      log_debug "Package not installed: $target_package"
+
+      # Verify package availability and get alternatives if needed
+      if alternative=$(verify_package_availability "$target_package"); then
+        if [[ "$alternative" != "$target_package" ]]; then
+          # Alternative package found
+          log_info "Using alternative package: $alternative (instead of $target_package)"
+          package_substitutions+=("$alternative")
+        else
+          # Original package is available
+          missing_packages+=("$target_package")
+        fi
+      else
+        # Package not available in repositories
+        unavailable_packages+=("$target_package")
+      fi
     fi
   done
 
-  if [[ ${#missing_packages[@]} -gt 0 ]]; then
-    log_info "Missing packages will be installed: ${missing_packages[*]}"
+  # Handle unavailable packages
+  if [[ ${#unavailable_packages[@]} -gt 0 ]]; then
+    log_warn "The following packages are not available in repositories:"
+    for pkg in "${unavailable_packages[@]}"; do
+      case "$pkg" in
+        "chrome-gnome-shell")
+          log_warn "  - $pkg: Try installing 'gnome-browser-connector' instead"
+          log_info "    Note: chrome-gnome-shell was replaced by gnome-browser-connector in newer Ubuntu versions"
+          ;;
+        "gnome-shell-extension-manager")
+          log_warn "  - $pkg: You can install GNOME extensions manually or use gnome-tweaks"
+          ;;
+        "ttf-mscorefonts-installer")
+          log_warn "  - $pkg: Consider installing 'fonts-liberation' or 'fonts-liberation2' for similar fonts"
+          ;;
+        *)
+          log_warn "  - $pkg: Package not found in repositories"
+          ;;
+      esac
+    done
+
+    log_info "You can continue without these packages, but some features may not work optimally."
+    read -rp "Continue anyway? (y/N): " -n 1 continue_anyway
+    echo
+    if [[ ! "$continue_anyway" =~ ^[Yy]$ ]]; then
+      log_error "Installation cancelled by user."
+      return 1
+    fi
+  fi
+
+  # Combine missing packages and substitutions
+  local packages_to_install=("${missing_packages[@]}" "${package_substitutions[@]}")
+
+  if [[ ${#packages_to_install[@]} -gt 0 ]]; then
+    log_info "Packages to be installed: ${packages_to_install[*]}"
 
     # Ask for confirmation
     read -rp "Install missing packages? (y/N): " -n 1 install_packages
@@ -138,13 +320,19 @@ check_required_packages() {
     fi
 
     # Install missing packages
-    log_info "Installing missing packages..."
-    if ! sudo apt install -y "${missing_packages[@]}"; then
-      log_error "Failed to install required packages."
-      return 1
-    fi
+    log_info "Installing packages..."
+    if sudo apt install -y "${packages_to_install[@]}"; then
+      log_info "Packages installed successfully"
+    else
+      log_error "Some packages failed to install. Check the output above for details."
+      log_info "You may need to resolve package conflicts or missing dependencies manually."
 
-    log_info "Required packages installed successfully"
+      read -rp "Continue with installation anyway? (y/N): " -n 1 continue_anyway
+      echo
+      if [[ ! "$continue_anyway" =~ ^[Yy]$ ]]; then
+        return 1
+      fi
+    fi
   else
     log_info "All required packages are already installed"
   fi
@@ -330,13 +518,16 @@ install_packages() {
 check_prerequisites() {
   log_info "Checking prerequisites..."
 
-  # Check if running on Ubuntu
-  if ! grep -q "Ubuntu" /etc/os-release 2>/dev/null; then
-    log_warn "This script is designed for Ubuntu. Proceeding anyway..."
+  # Detect Ubuntu version for package compatibility
+  if detect_ubuntu_version; then
+    log_info "Running on Ubuntu ${UBUNTU_VERSION} (${UBUNTU_CODENAME})"
+  else
+    log_warn "Not running on Ubuntu or version detection failed"
+    log_warn "Package installation may encounter issues"
   fi
 
-  # Check if GNOME is running
-  if [[ "${XDG_CURRENT_DESKTOP:-}" != *"GNOME"* ]]; then
+  # Check GNOME environment using enhanced detection
+  if ! detect_gnome_environment; then
     log_warn "GNOME desktop not detected. This script is designed for GNOME."
     read -rp "Continue anyway? (y/N): " -n 1 continue_anyway
     echo
